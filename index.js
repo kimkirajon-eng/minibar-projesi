@@ -78,57 +78,100 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Minibar v17.3</title>
+    <title>Smart Minibar v17.4</title>
     <style>
         :root { --p: #2c3e50; --g: #2ecc71; --y: #f1c40f; --r: #e74c3c; --b: #3498db; --gr: #95a5a6; }
-        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
-        .page { display: none; max-width: 1100px; margin: auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f3f5; margin: 0; padding: 10px; color: #333; }
+        .page { display: none; max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
         .active { display: block; }
-        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        
+        /* Buton Genel Stil */
+        button { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #e0e0e0; border-radius: 10px; box-sizing: border-box; background: #fafafa; }
         .btn-p { background: var(--p); color: white; width: 100%; margin: 5px 0; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin: 15px 0; }
-        .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; position: relative; overflow: hidden; }
-        
-        .status-Müsait { background-color: var(--g) !important; color: white !important; border:none; }
-        .status-Sonra { background-color: var(--y) !important; color: black !important; border:none; }
-        .status-DND { background-color: var(--r) !important; color: white !important; border:none; }
-        
-        /* Tarihçe Şeritleri */
-        .history-container { position: absolute; left: 0; top: 0; bottom: 0; display: flex; flex-direction: row; gap: 1px; padding: 2px; }
-        .h-bar { width: 4px; height: 100%; border-radius: 1px; }
-        .h-Müsait { background: var(--g); border: 0.5px solid white; }
-        .h-Sonra { background: var(--y); border: 0.5px solid white; }
-        .h-DND { background: var(--r); border: 0.5px solid white; }
+        .btn-p:active { transform: scale(0.98); }
 
-        .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; overflow-x: auto; }
-        .a-tab { flex: 1; padding: 10px; font-size: 11px; white-space: nowrap; background: none; }
-        .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; }
-        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
-        th { background: #34495e; color: white; }
-        #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; }
-        .modal-box { background:white; width:90%; max-width:400px; padding:20px; border-radius:15px; position:relative; }
-        .sub-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        /* Matris Oda Butonları - Profesyonel Görünüm */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 12px; margin: 15px 0; }
+        .btn-room { 
+            background: #ffffff; 
+            border: 1px solid #edf2f7; 
+            height: 55px; 
+            border-radius: 12px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            font-size: 14px; 
+            position: relative; 
+            overflow: hidden; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            color: #4a5568;
+        }
+
+        /* Sol Kenar Geçmiş Şeridi */
+        .history-strip { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            bottom: 0; 
+            width: 8px; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        .h-segment { flex: 1; width: 100%; }
+        .h-Müsait { background: var(--g); }
+        .h-Sonra { background: var(--y); }
+        .h-DND { background: var(--r); }
+
+        /* Sağ Üst Durum Noktası */
+        .status-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e0;
+        }
+        .dot-Müsait { background: var(--g); box-shadow: 0 0 8px var(--g); }
+        .dot-Sonra { background: var(--y); box-shadow: 0 0 8px var(--y); }
+        .dot-DND { background: var(--r); box-shadow: 0 0 8px var(--r); }
+
+        /* Aktif Oda Stil (Admin Panel Renklendirme) */
+        .room-active { background: #f8fafc; border-color: #e2e8f0; font-weight: bold; color: #2d3748; }
+
+        .admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; background: #f7fafc; padding: 6px; border-radius: 12px; }
+        .a-tab { flex: 1; padding: 10px; font-size: 12px; background: transparent; color: #718096; }
+        .a-tab.active { background: white; color: var(--p); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 12px; border-radius: 10px; overflow: hidden; }
+        th { background: #f8fafc; color: #4a5568; padding: 12px; text-align: left; border-bottom: 2px solid #edf2f7; }
+        td { padding: 12px; border-bottom: 1px solid #edf2f7; }
+        
+        tr.row-Müsait { border-left: 5px solid var(--g); }
+        tr.row-Sonra { border-left: 5px solid var(--y); }
+        tr.row-DND { border-left: 5px solid var(--r); }
+
+        #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index:9999; align-items:center; justify-content:center; }
+        .modal-box { background:white; width:90%; max-width:400px; padding:25px; border-radius:20px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
     <div id="modal">
-        <div class="modal-box"><h3 id="mTitle" style="margin-top:0"></h3><div id="mBody"></div><button class="btn-p" onclick="document.getElementById('modal').style.display='none'">Kapat</button></div>
+        <div class="modal-box"><h3 id="mTitle" style="margin-top:0; color:var(--p)"></h3><div id="mBody" style="margin-bottom:20px"></div><button class="btn-p" onclick="document.getElementById('modal').style.display='none'">Kapat</button></div>
     </div>
 
     <div id="loginPage" class="page active">
-        <h2 style="text-align:center; color:var(--p)">Smart Minibar</h2>
+        <h2 style="text-align:center; color:var(--p); margin-bottom:30px">Smart Minibar</h2>
         <input type="text" id="lUser" placeholder="Kullanıcı Adı">
         <input type="password" id="lPass" placeholder="Şifre">
         <button class="btn-p" onclick="login()">GİRİŞ YAP</button>
     </div>
 
     <div id="staffPage" class="page">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-            <b id="sn"></b> <button onclick="logout()" style="background:#eee; padding:5px 10px">Çıkış</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+            <b id="sn" style="color:var(--p)"></b> <button onclick="logout()" style="background:#f7fafc; color:var(--r); font-size:12px">Güvenli Çıkış</button>
         </div>
         <div id="staffContent">
             <div id="blockTabs" class="grid"></div>
@@ -136,36 +179,36 @@ app.get('/', (req, res) => {
             <div id="view_rooms" class="grid" style="display:none"></div>
         </div>
         <div id="statusScreen" style="display:none; text-align:center;">
-            <h2 id="targetRoomTitle"></h2>
-            <button class="btn-p" style="background:var(--g); height:80px; font-size:18px" onclick="openProductMenu()">MÜSAİT / GİRİLDİ</button>
-            <button class="btn-p" style="background:var(--y); color:#000; height:70px" onclick="submitLog('Sonra', '-')">SONRA BAKILACAK</button>
+            <h2 id="targetRoomTitle" style="color:var(--p)"></h2>
+            <button class="btn-p" style="background:var(--g); height:90px; font-size:18px; margin-bottom:12px" onclick="openProductMenu()">MÜSAİT / GİRİLDİ</button>
+            <button class="btn-p" style="background:var(--y); color:#000; height:70px; margin-bottom:12px" onclick="submitLog('Sonra', '-')">SONRA BAKILACAK</button>
             <button class="btn-p" style="background:var(--r); height:70px" onclick="submitLog('DND', '-')">DND / GİRİLEMEZ</button>
-            <button class="btn-p" style="background:var(--gr); margin-top:20px" onclick="goBackToRooms()">⬅ VAZGEÇ / GERİ</button>
+            <button class="btn-p" style="background:#edf2f7; color:#4a5568; margin-top:20px" onclick="goBackToRooms()">⬅ VAZGEÇ / GERİ</button>
         </div>
         <div id="productMenu" style="display:none">
-            <h3 style="text-align:center">Harcama Girişi</h3>
+            <h3 style="text-align:center; color:var(--p)">Harcama Girişi</h3>
             <div id="pGrid" class="grid"></div>
-            <button class="btn-p" style="background:var(--g); height:70px; font-size:20px" onclick="processAndSubmit()">KAYDI TAMAMLA</button>
-            <button class="btn-p" style="background:var(--gr); margin-top:10px" onclick="openStatusMenu(selRoom)">⬅ GERİ</button>
+            <button class="btn-p" style="background:var(--g); height:80px; font-size:20px; margin-top:15px" onclick="processAndSubmit()">KAYDI TAMAMLA</button>
+            <button class="btn-p" style="background:#edf2f7; color:#4a5568; margin-top:10px" onclick="openStatusMenu(selRoom)">⬅ GERİ</button>
         </div>
     </div>
 
     <div id="adminPage" class="page">
         <div class="admin-tabs">
-            <button class="a-tab active" onclick="switchAdminTab('t_live', this)">👁️ Canlı Takip</button>
-            <button class="a-tab" onclick="switchAdminTab('t_matrix', this)">🏢 Otel Haritası</button>
-            <button class="a-tab" onclick="switchAdminTab('t_setup', this)">⚙️ Yapılandır</button>
+            <button class="a-tab active" onclick="switchAdminTab('t_live', this)">👁️ Canlı</button>
+            <button class="a-tab" onclick="switchAdminTab('t_matrix', this)">🏢 Harita</button>
+            <button class="a-tab" onclick="switchAdminTab('t_setup', this)">⚙️ Ayar</button>
             <button class="a-tab" onclick="switchAdminTab('t_end', this)">🧹 Gün Sonu</button>
-            <button onclick="logout()" style="background:#ddd">Çıkış</button>
+            <button onclick="logout()" style="background:transparent; color:var(--r); font-size:18px">×</button>
         </div>
-        <div id="t_live" class="tab-content active"><div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Personel</th><th>Durum</th><th>Harcamalar</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div></div>
+        <div id="t_live" class="tab-content active"><div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Personel</th><th>Durum</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div></div>
         <div id="t_matrix" class="tab-content"><div id="matrixArea"></div></div>
         <div id="t_setup" class="tab-content">
-            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px"><h4>Personel Ekle</h4><input type="text" id="inUN" placeholder="Ad"> <input type="text" id="inUP" placeholder="Şifre"><button class="btn-p" onclick="addStaff()" style="background:var(--b)">PERSONELİ KAYDET</button><div id="uList" style="margin-top:10px"></div></div>
-            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px"><h4>Otel Yapısı Ekle</h4><input type="text" id="inB" placeholder="Blok"> <input type="text" id="inF" placeholder="Kat"> <input type="text" id="inR" placeholder="Odalar (101,102)"><button class="btn-p" onclick="addStruct()">YAPIYI KAYDET</button></div>
-            <div style="background:#f9f9f9; padding:10px; border-radius:8px;"><h4>Ürün Ekle</h4><input type="text" id="inP" placeholder="Ürün Adı"><button class="btn-p" onclick="addProd()">ÜRÜN EKLE</button><div id="pList" style="margin-top:10px"></div></div>
+            <div style="background:#f8fafc; padding:15px; border-radius:12px; margin-bottom:15px"><h4>Personel Yönetimi</h4><input type="text" id="inUN" placeholder="Ad"> <input type="text" id="inUP" placeholder="Şifre"><button class="btn-p" onclick="addStaff()" style="background:var(--b)">EKLE</button><div id="uList" style="margin-top:10px"></div></div>
+            <div style="background:#f8fafc; padding:15px; border-radius:12px; margin-bottom:15px"><h4>Otel Yapısı</h4><input type="text" id="inB" placeholder="Blok"> <input type="text" id="inF" placeholder="Kat"> <input type="text" id="inR" placeholder="Odalar (101,102)"><button class="btn-p" onclick="addStruct()">KAYDET</button></div>
+            <div style="background:#f8fafc; padding:15px; border-radius:12px;"><h4>Ürün Listesi</h4><input type="text" id="inP" placeholder="Ürün Adı"><button class="btn-p" onclick="addProd()">EKLE</button><div id="pList" style="margin-top:10px"></div></div>
         </div>
-        <div id="t_end" class="tab-content" style="text-align:center"><button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g); height:60px">📥 EXCEL RAPORU İNDİR</button><button class="btn-p" onclick="endDay()" style="background:var(--r); margin-top:20px">🧹 TÜM KAYITLARI SIFIRLA</button></div>
+        <div id="t_end" class="tab-content" style="text-align:center"><button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g); height:65px; font-size:18px">📥 RAPORU İNDİR (EXCEL)</button><button class="btn-p" onclick="endDay()" style="background:var(--r); margin-top:30px; opacity:0.8">🧹 TÜM VERİLERİ SIFIRLA</button></div>
     </div>
 
     <script>
@@ -182,7 +225,7 @@ app.get('/', (req, res) => {
             const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user,pass}) });
             const data = await res.json();
             if(data.success) { currentUser = data; localStorage.setItem('minibar_user', JSON.stringify(data)); launchApp(); }
-            else alert("Hata!");
+            else alert("Giriş başarısız!");
         }
 
         function logout() { localStorage.removeItem('minibar_user'); if(adminRefreshInterval) clearInterval(adminRefreshInterval); location.reload(); }
@@ -190,7 +233,7 @@ app.get('/', (req, res) => {
         function launchApp() {
             document.getElementById('loginPage').classList.remove('active');
             if(currentUser.role === 'admin') { document.getElementById('adminPage').classList.add('active'); initAdmin(); adminRefreshInterval = setInterval(autoUpdate, 5000); }
-            else { document.getElementById('staffPage').classList.add('active'); document.getElementById('sn').innerText = "Personel: " + currentUser.user; initStaff(); }
+            else { document.getElementById('staffPage').classList.add('active'); document.getElementById('sn').innerText = "Hoş geldin, " + currentUser.user; initStaff(); }
         }
 
         async function autoUpdate() { 
@@ -199,6 +242,7 @@ app.get('/', (req, res) => {
             if(document.getElementById('t_matrix').classList.contains('active')) refreshMatrix();
         }
 
+        // --- STAFF ---
         async function initStaff() {
             const [s, p, l] = await Promise.all([fetch('/api/structure').then(r=>r.json()), fetch('/api/products').then(r=>r.json()), fetch('/api/logs').then(r=>r.json())]);
             hotelData = s; products = p; logs = l; renderBlocks();
@@ -214,7 +258,7 @@ app.get('/', (req, res) => {
         function selectBlock(n) {
             selBlock = n; const b = hotelData.find(x => x.name === n);
             document.getElementById('blockTabs').style.display='none'; document.getElementById('view_floors').style.display='grid'; document.getElementById('view_rooms').style.display='none';
-            document.getElementById('view_floors').innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b); color:white" onclick="selectFloor(\\''+f.name+'\\')">Kat '+f.name+'</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">⬅ BLOK SEÇİMİNE DÖN</button>';
+            document.getElementById('view_floors').innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b); color:white" onclick="selectFloor(\\''+f.name+'\\')">Kat '+f.name+'</button>').join('') + '<button class="btn-p" style="background:#e2e8f0; color:#4a5568" onclick="renderBlocks()">⬅ GERİ</button>';
         }
 
         function selectFloor(n) {
@@ -222,62 +266,48 @@ app.get('/', (req, res) => {
             document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='grid'; document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='none'; document.getElementById('staffContent').style.display='block';
             document.getElementById('view_rooms').innerHTML = f.rooms.map(r => { 
                 const log = logs.find(l => String(l.room) === String(r)); 
-                return '<button class="btn-room '+(log?'status-'+log.status:'')+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>'; 
-            }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+selBlock+'\\')">⬅ KAT SEÇİMİNE DÖN</button>';
+                return '<button class="btn-room '+(log?'room-active':'')+'" onclick="openStatusMenu(\\''+r+'\\')">'+ (log? '<div class="status-dot dot-'+log.status+'"></div>' : '') + r + '</button>'; 
+            }).join('') + '<button class="btn-p" style="background:#e2e8f0; color:#4a5568" onclick="selectBlock(\\''+selBlock+'\\')">⬅ GERİ</button>';
         }
 
         function goBackToRooms() { selectFloor(selFloor); }
-
-        function openStatusMenu(r) { 
-            selRoom = r; document.getElementById('staffContent').style.display='none'; document.getElementById('statusScreen').style.display='block'; document.getElementById('targetRoomTitle').innerText="Oda "+r; 
-        }
-
+        function openStatusMenu(r) { selRoom = r; document.getElementById('staffContent').style.display='none'; document.getElementById('statusScreen').style.display='block'; document.getElementById('targetRoomTitle').innerText="Oda "+r; }
         function openProductMenu() { 
             document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='block'; counts = {}; products.forEach(p => counts[p.name] = 0);
-            document.getElementById('pGrid').innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd; padding:10px; text-align:center; border-radius:8px;" onclick="counts[\\''+p.name+'\\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><b id="c'+i+'" style="color:var(--b); font-size:20px;">0</b></div>').join('');
+            document.getElementById('pGrid').innerHTML = products.map((p,i) => '<div style="border:1px solid #edf2f7; padding:12px; text-align:center; border-radius:12px; background:white" onclick="counts[\\''+p.name+'\\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><b id="c'+i+'" style="color:var(--b); font-size:22px;">0</b></div>').join('');
         }
-
         async function submitLog(status, details) {
             await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) });
             const lRes = await fetch('/api/logs'); logs = await lRes.json();
             selectFloor(selFloor); 
         }
-
-        function processAndSubmit() { 
-            let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]); 
-            submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi"); 
-        }
+        function processAndSubmit() { let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]); submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi"); }
 
         // --- ADMIN ---
         async function initAdmin() {
             const [p, s, u, l] = await Promise.all([fetch('/api/products').then(r=>r.json()), fetch('/api/structure').then(r=>r.json()), fetch('/api/users').then(r=>r.json()), fetch('/api/logs').then(r=>r.json())]);
             products = p; hotelData = s; logs = l;
-            document.getElementById('pList').innerHTML = products.map(p => '<div class="sub-item">'+p.name+'</div>').join('');
-            document.getElementById('uList').innerHTML = u.filter(u => u.role !== 'admin').map(u => '<div class="sub-item">'+u.user+' <button onclick="delUser(\\''+u.user+'\\')" style="background:var(--r); color:white; border-radius:4px; padding:2px 5px">SİL</button></div>').join('');
+            document.getElementById('pList').innerHTML = products.map(p => '<div style="font-size:13px; padding:5px; border-bottom:1px solid #eee">'+p.name+'</div>').join('');
+            document.getElementById('uList').innerHTML = u.filter(u => u.role !== 'admin').map(u => '<div style="display:flex; justify-content:space-between; padding:5px; border-bottom:1px solid #eee">'+u.user+' <button onclick="delUser(\\''+u.user+'\\')" style="background:var(--r); color:white; padding:2px 6px; font-size:10px">SİL</button></div>').join('');
             refreshLiveLogs();
         }
-        function refreshLiveLogs() { document.getElementById('liveBody').innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join(''); }
+        function refreshLiveLogs() { document.getElementById('liveBody').innerHTML = logs.slice(0,50).map(l => '<tr class="row-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.endTime+'</td></tr>').join(''); }
         
         function refreshMatrix() {
-            let h = ""; 
-            hotelData.forEach(b => {
-                h += '<h4>Blok '+b.name+'</h4>'; 
+            let h = ""; hotelData.forEach(b => {
+                h += '<h4 style="margin:20px 0 10px 0; color:var(--p)">Blok '+b.name+'</h4>'; 
                 b.floors.forEach(f => {
-                    h += '<div style="margin-bottom:10px"><small>Kat '+f.name+'</small><div class="grid">';
+                    h += '<div style="margin-bottom:15px"><small style="color:#718096">Kat '+f.name+'</small><div class="grid">';
                     f.rooms.forEach(r => { 
-                        // Odaya ait tüm kayıtları bul ve tarihe/saate göre sırala (en eski solda)
                         const roomLogs = logs.filter(l => String(l.room) === String(r)).reverse();
-                        const lastLog = roomLogs[roomLogs.length - 1]; // En son durum
-                        const cls = lastLog ? 'status-' + lastLog.status : '';
+                        const lastLog = roomLogs[roomLogs.length - 1];
                         
-                        // Tarihçe şeritlerini oluştur
-                        let historyHtml = '<div class="history-container">';
-                        roomLogs.forEach(rl => {
-                            historyHtml += '<div class="h-bar h-'+rl.status+'"></div>';
-                        });
+                        let historyHtml = '<div class="history-strip">';
+                        roomLogs.forEach(rl => { historyHtml += '<div class="h-segment h-'+rl.status+'"></div>'; });
                         historyHtml += '</div>';
 
-                        h += '<div class="btn-room '+cls+'" onclick="showRoomDetail(\\''+r+'\\')">' + historyHtml + r + '</div>'; 
+                        const dotClass = lastLog ? 'dot-' + lastLog.status : '';
+                        h += '<div class="btn-room '+(lastLog?'room-active':'')+'" onclick="showRoomDetail(\\''+r+'\\')">' + historyHtml + '<div class="status-dot '+dotClass+'"></div>' + r + '</div>'; 
                     });
                     h += '</div></div>';
                 });
@@ -287,10 +317,10 @@ app.get('/', (req, res) => {
 
         function showRoomDetail(r) {
             const roomLogs = logs.filter(l => String(l.room) === String(r));
-            document.getElementById('mTitle').innerText = "Oda " + r + " (Tarihçe)";
+            document.getElementById('mTitle').innerText = "Oda " + r;
             document.getElementById('mBody').innerHTML = roomLogs.length > 0 ? 
-                roomLogs.map(l => '<div style="border-bottom:1px solid #eee; padding:5px;"><b style="color:var(--p)">'+l.endTime+'</b>: '+l.status+' ('+l.staff+')<br><small>'+l.details+'</small></div>').join('') : 
-                '<p>İşlem yapılmadı.</p>';
+                roomLogs.map(l => '<div style="padding:10px; border-bottom:1px solid #edf2f7"><b style="color:var(--p)">'+l.endTime+'</b> - '+l.status+'<br><small style="color:#718096">'+l.staff+' | '+l.details+'</small></div>').join('') : 
+                '<p style="color:#a0aec0">İşlem kaydı bulunamadı.</p>';
             document.getElementById('modal').style.display='flex';
         }
 
@@ -301,7 +331,7 @@ app.get('/', (req, res) => {
             if(id === 't_matrix') refreshMatrix(); else if(id === 't_live') refreshLiveLogs();
         }
         async function addStaff() { await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:document.getElementById('inUN').value, pass:document.getElementById('inUP').value}) }); initAdmin(); }
-        async function delUser(n) { if(confirm('Sil?')) { await fetch('/api/users/'+n, { method:'DELETE' }); initAdmin(); } }
+        async function delUser(n) { if(confirm('Silinsin mi?')) { await fetch('/api/users/'+n, { method:'DELETE' }); initAdmin(); } }
         async function addStruct() {
             let current = hotelData; let block = current.find(x => x.name === document.getElementById('inB').value);
             if(!block) { block = {name: document.getElementById('inB').value, floors: []}; current.push(block); }
@@ -309,11 +339,11 @@ app.get('/', (req, res) => {
             await fetch('/api/structure', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(current) }); initAdmin();
         }
         async function addProd() { products.push({name: document.getElementById('inP').value}); await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(products) }); initAdmin(); }
-        async function endDay() { if(confirm("Sıfırla?")) { await fetch('/api/end-day', { method:'POST' }); initAdmin(); } }
+        async function endDay() { if(confirm("DİKKAT: Günü kapatmak tüm verileri silecektir! Onaylıyor musunuz?")) { await fetch('/api/end-day', { method:'POST' }); initAdmin(); } }
     </script>
 </body>
 </html>
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.3 Tarihçe Şeritli Harita Aktif: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Profesyonel Görünüm Aktif: ${PORT}`));
