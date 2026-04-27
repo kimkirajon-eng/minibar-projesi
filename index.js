@@ -21,9 +21,9 @@ app.use(bodyParser.json());
 
 const readDB = (f) => {
     if (!fs.existsSync(f)) {
-        if (f === DB.users) return [{ user: 'hakkı', pass: '2125', role: 'admin', sid: '' }];
-        if (f === DB.products) return [{ name: 'Su' }, { name: 'Kola' }, { name: 'Bira' }];
-        if (f === DB.structure) return [{name: "A", floors: [{name: "1", rooms: ["101", "102"]}]}];
+        if (f === DB.users) return [{ user: 'hakkı', pass: '2125', role: 'admin' }];
+        if (f === DB.products) return [{ name: 'Su' }, { name: 'Kola' }];
+        if (f === DB.structure) return [];
         return [];
     }
     return JSON.parse(fs.readFileSync(f));
@@ -31,20 +31,12 @@ const readDB = (f) => {
 
 const writeDB = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
-app.get('/sw.js', (req, res) => {
-    res.setHeader('Content-Type', 'application/javascript');
-    res.send(`self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('fetch', e => e);`);
-});
-
+// API Endpoints
 app.post('/api/login', (req, res) => {
     const users = readDB(DB.users);
     const u = users.find(u => u.user === req.body.user && u.pass === req.body.pass);
-    if (u) {
-        const sid = Math.random().toString(36).substring(7);
-        u.sid = sid;
-        writeDB(DB.users, users);
-        res.json({ success: true, role: u.role, user: u.user, sid: sid });
-    } else res.json({ success: false });
+    if (u) res.json({ success: true, role: u.role, user: u.user });
+    else res.json({ success: false });
 });
 
 app.get('/api/logs', (req, res) => res.json(readDB(DB.logs)));
@@ -61,7 +53,7 @@ app.get('/api/export', (req, res) => {
     XLSX.utils.book_append_sheet(wb, ws, "Rapor");
     const buf = XLSX.write(wb, {bookType:'xlsx', type:'buffer'});
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=minibar_rapor.xlsx');
+    res.setHeader('Content-Disposition', 'attachment; filename=rapor.xlsx');
     res.send(buf);
 });
 
@@ -71,7 +63,7 @@ app.get('/api/products', (req, res) => res.json(readDB(DB.products)));
 app.post('/api/products', (req, res) => { writeDB(DB.products, req.body); res.json({ success: true }); });
 app.get('/api/users', (req, res) => res.json(readDB(DB.users)));
 app.post('/api/users', (req, res) => {
-    const u = readDB(DB.users); u.push({ ...req.body, role: 'staff', sid: '' });
+    const u = readDB(DB.users); u.push({ ...req.body, role: 'staff' });
     writeDB(DB.users, u); res.json({ success: true });
 });
 app.delete('/api/users/:name', (req, res) => {
@@ -87,7 +79,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Minibar v16.7</title>
+    <title>Smart Minibar v16.8</title>
     <style>
         :root { --p: #2c3e50; --g: #2ecc71; --y: #f1c40f; --r: #e74c3c; --b: #3498db; --gr: #95a5a6; }
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
@@ -101,15 +93,15 @@ app.get('/', (req, res) => {
         .room-done-Müsait { background: var(--g) !important; color: white; border:none; }
         .room-done-Sonra { background: var(--y) !important; color: #000; border:none; }
         .room-done-DND { background: var(--r) !important; color: white; border:none; }
-        .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; background: #eee; padding: 5px; border-radius: 8px; }
+        .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; overflow-x: auto; }
         .a-tab { flex: 1; padding: 10px; font-size: 12px; white-space: nowrap; background: none; }
         .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
-        th { background: #f8f9fa; }
-        .sub-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+        th, td { border: 1px solid #eee; padding: 8px; text-align: left; }
+        .sub-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .delete-btn { background: var(--r); color: white; padding: 4px 8px; font-size: 10px; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -124,21 +116,18 @@ app.get('/', (req, res) => {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
             <b id="sn"></b> <button onclick="logout()" style="background:#eee; padding:5px 10px">Çıkış</button>
         </div>
-        
         <div id="staffContent">
             <div id="blockTabs" class="grid"></div>
             <div id="view_floors" class="grid" style="display:none"></div>
             <div id="view_rooms" class="grid" style="display:none"></div>
         </div>
-
         <div id="statusScreen" style="display:none; text-align:center;">
             <h2 id="targetRoomTitle"></h2>
             <button class="btn-p" style="background:var(--g); height:80px; font-size:18px" onclick="openProductMenu()">MÜSAİT / GİRİLDİ</button>
             <button class="btn-p" style="background:var(--y); color:#000; height:70px" onclick="submitLog('Sonra', '-')">SONRA BAKILACAK</button>
             <button class="btn-p" style="background:var(--r); height:70px" onclick="submitLog('DND', '-')">DND / GİRİLEMEZ</button>
-            <button class="btn-p" style="background:var(--gr); margin-top:20px" onclick="showStaffMain()">⬅ GERİ DÖN</button>
+            <button class="btn-p" style="background:var(--gr); margin-top:20px" onclick="renderBlocks()">⬅ GERİ DÖN</button>
         </div>
-
         <div id="productMenu" style="display:none">
             <h3 style="text-align:center">Harcama Girişi</h3>
             <div id="pGrid" class="grid"></div>
@@ -156,20 +145,30 @@ app.get('/', (req, res) => {
         </div>
 
         <div id="t_live" class="tab-content active">
-            <div style="overflow-x:auto"><table id="liveLogTable"><thead><tr><th>Oda</th><th>Pers.</th><th>Durum</th><th>Harcamalar</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div>
+            <div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Pers.</th><th>Durum</th><th>Harcamalar</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div>
         </div>
 
         <div id="t_setup" class="tab-content">
-            <h4>Oda Yapısı Ekle</h4>
-            <input type="text" id="inB" placeholder="Blok (Örn: A)">
-            <input type="text" id="inF" placeholder="Kat (Örn: 1)">
-            <input type="text" id="inR" placeholder="Odalar (Örn: 101,102,103)">
-            <button class="btn-p" onclick="addStruct()">YAPIYI KAYDET</button>
-            <hr>
-            <h4>Ürün Ekle</h4>
-            <input type="text" id="inP" placeholder="Ürün Adı">
-            <button class="btn-p" onclick="addProd()">ÜRÜN EKLE</button>
-            <div id="pList"></div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px">
+                <h4 style="margin:0 0 10px 0">Personel Ekle</h4>
+                <input type="text" id="inUN" placeholder="Personel Adı">
+                <input type="text" id="inUP" placeholder="Şifre">
+                <button class="btn-p" onclick="addStaff()" style="background:var(--b)">PERSONELİ KAYDET</button>
+                <div id="uList" style="margin-top:10px"></div>
+            </div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px">
+                <h4 style="margin:0 0 10px 0">Otel Yapısı Ekle</h4>
+                <input type="text" id="inB" placeholder="Blok (Örn: A)">
+                <input type="text" id="inF" placeholder="Kat (Örn: 1)">
+                <input type="text" id="inR" placeholder="Odalar (Örn: 101,102,103)">
+                <button class="btn-p" onclick="addStruct()">YAPIYI KAYDET</button>
+            </div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px;">
+                <h4 style="margin:0 0 10px 0">Ürün Ekle</h4>
+                <input type="text" id="inP" placeholder="Ürün Adı">
+                <button class="btn-p" onclick="addProd()">ÜRÜN EKLE</button>
+                <div id="pList" style="margin-top:10px"></div>
+            </div>
         </div>
 
         <div id="t_end" class="tab-content" style="text-align:center">
@@ -179,47 +178,29 @@ app.get('/', (req, res) => {
     </div>
 
     <script>
-        let currentUser = null;
-        let hotelData = [], products = [], logs = [], counts = {}, selRoom = "";
+        let currentUser = null, hotelData = [], products = [], logs = [], counts = {}, selRoom = "", selBlock = "", selFloor = "";
 
-        // SAYFA YÜKLENDİĞİNDE OTURUM KONTROLÜ
         window.onload = () => {
             const savedUser = localStorage.getItem('minibar_user');
-            if(savedUser) {
-                currentUser = JSON.parse(savedUser);
-                launchApp();
-            }
+            if(savedUser) { currentUser = JSON.parse(savedUser); launchApp(); }
         };
 
         async function login() {
             const user = document.getElementById('lUser').value, pass = document.getElementById('lPass').value;
             const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user,pass}) });
             const data = await res.json();
-            if(data.success) {
-                currentUser = data;
-                localStorage.setItem('minibar_user', JSON.stringify(data));
-                launchApp();
-            } else alert("Kullanıcı adı veya şifre hatalı!");
+            if(data.success) { currentUser = data; localStorage.setItem('minibar_user', JSON.stringify(data)); launchApp(); }
+            else alert("Hata!");
         }
 
-        function logout() {
-            localStorage.removeItem('minibar_user');
-            location.reload();
-        }
+        function logout() { localStorage.removeItem('minibar_user'); location.reload(); }
 
         function launchApp() {
             document.getElementById('loginPage').classList.remove('active');
-            if(currentUser.role === 'admin') {
-                document.getElementById('adminPage').classList.add('active');
-                initAdmin();
-            } else {
-                document.getElementById('staffPage').classList.add('active');
-                document.getElementById('sn').innerText = "Personel: " + currentUser.user;
-                initStaff();
-            }
+            if(currentUser.role === 'admin') { document.getElementById('adminPage').classList.add('active'); initAdmin(); }
+            else { document.getElementById('staffPage').classList.add('active'); document.getElementById('sn').innerText = "Personel: " + currentUser.user; initStaff(); }
         }
 
-        // PERSONEL FONKSİYONLARI
         async function initStaff() {
             hotelData = await (await fetch('/api/structure')).json();
             products = await (await fetch('/api/products')).json();
@@ -238,50 +219,43 @@ app.get('/', (req, res) => {
         }
 
         function selectBlock(n) {
+            selBlock = n;
             const b = hotelData.find(x => x.name === n);
             document.getElementById('blockTabs').style.display = 'none';
             document.getElementById('view_floors').style.display = 'grid';
-            document.getElementById('view_floors').innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b); color:white" onclick="selectFloor(\\''+n+'\\',\\''+f.name+'\\')">Kat '+f.name+'</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">⬅ GERİ</button>';
+            document.getElementById('view_floors').innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b); color:white" onclick="selectFloor(\\''+f.name+'\\')">Kat '+f.name+'</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">⬅ GERİ</button>';
         }
 
-        function selectFloor(bn, fn) {
-            const f = hotelData.find(x => x.name === bn).floors.find(x => x.name === fn);
+        function selectFloor(n) {
+            selFloor = n;
+            const f = hotelData.find(x => x.name === selBlock).floors.find(x => x.name === n);
             document.getElementById('view_floors').style.display = 'none';
             document.getElementById('view_rooms').style.display = 'grid';
             document.getElementById('view_rooms').innerHTML = f.rooms.map(r => {
                 const log = logs.find(l => String(l.room) === String(r));
-                const cls = log ? 'room-done-' + log.status : '';
-                return '<button class="btn-room '+cls+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>';
-            }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+bn+'\\')">⬅ GERİ</button>';
+                return '<button class="btn-room '+(log?'room-done-'+log.status:'')+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>';
+            }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+selBlock+'\\')">⬅ GERİ</button>';
         }
 
         function openStatusMenu(r) {
             selRoom = r;
-            document.getElementById('staffContent').style.display = 'none';
-            document.getElementById('productMenu').style.display = 'none';
-            document.getElementById('statusScreen').style.display = 'block';
-            document.getElementById('targetRoomTitle').innerText = "Oda " + r;
+            document.getElementById('staffContent').style.display='none';
+            document.getElementById('statusScreen').style.display='block';
+            document.getElementById('targetRoomTitle').innerText="Oda "+r;
         }
 
         function openProductMenu() {
-            document.getElementById('statusScreen').style.display = 'none';
-            document.getElementById('productMenu').style.display = 'block';
-            counts = {};
-            products.forEach(p => counts[p.name] = 0);
-            document.getElementById('pGrid').innerHTML = products.map((p,i) => \`
-                <div style="border:1px solid #ddd; padding:10px; text-align:center; border-radius:8px;" onclick="counts['\${p.name}']++; document.getElementById('c\${i}').innerText=counts['\${p.name}']">
-                    \${p.name}<br><b id="c\${i}" style="color:var(--b); font-size:20px;">0</b>
-                </div>
-            \`).join('');
+            document.getElementById('statusScreen').style.display='none';
+            document.getElementById('productMenu').style.display='block';
+            counts = {}; products.forEach(p => counts[p.name] = 0);
+            document.getElementById('pGrid').innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd; padding:10px; text-align:center; border-radius:8px;" onclick="counts[\\''+p.name+'\\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><b id="c'+i+'" style="color:var(--b); font-size:20px;">0</b></div>').join('');
         }
 
-        function showStaffMain() { initStaff(); }
-
         async function submitLog(status, details) {
-            const entry = { room: selRoom, status, details, staff: currentUser.user };
-            await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(entry) });
+            await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) });
             alert("Kaydedildi");
-            initStaff(); 
+            initStaff();
+            setTimeout(() => selectFloor(selFloor), 100); 
         }
 
         function processAndSubmit() {
@@ -289,27 +263,38 @@ app.get('/', (req, res) => {
             submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi");
         }
 
-        // YÖNETİCİ FONKSİYONLARI
+        // ADMIN
         async function initAdmin() {
-            const lRes = await fetch('/api/logs'); logs = await lRes.json();
-            const pRes = await fetch('/api/products'); products = await pRes.json();
-            const sRes = await fetch('/api/structure'); hotelData = await sRes.json();
+            logs = await (await fetch('/api/logs')).json();
+            products = await (await fetch('/api/products')).json();
+            hotelData = await (await fetch('/api/structure')).json();
+            const users = await (await fetch('/api/users')).json();
             
             document.getElementById('liveBody').innerHTML = logs.map(l => '<tr><td>'+l.room+'</td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join('');
             document.getElementById('pList').innerHTML = products.map(p => '<div class="sub-item">'+p.name+'</div>').join('');
+            document.getElementById('uList').innerHTML = users.filter(u => u.role !== 'admin').map(u => '<div class="sub-item">'+u.user+' <button class="delete-btn" onclick="delUser(\\''+u.user+'\\')">SİL</button></div>').join('');
         }
 
         function switchAdminTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.a-tab').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            btn.classList.add('active');
+            document.getElementById(id).classList.add('active'); btn.classList.add('active');
             initAdmin();
+        }
+
+        async function addStaff() {
+            const user = document.getElementById('inUN').value, pass = document.getElementById('inUP').value;
+            if(!user || !pass) return alert("Eksik!");
+            await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user, pass}) });
+            document.getElementById('inUN').value = ""; document.getElementById('inUP').value = ""; initAdmin();
+        }
+
+        async function delUser(name) {
+            if(confirm('Silinsin mi?')) { await fetch('/api/users/'+name, { method:'DELETE' }); initAdmin(); }
         }
 
         async function addStruct() {
             const b = document.getElementById('inB').value, f = document.getElementById('inF').value, r = document.getElementById('inR').value;
-            if(!b || !f || !r) return alert("Eksik alan!");
             let current = hotelData;
             let block = current.find(x => x.name === b);
             if(!block) { block = {name: b, floors: []}; current.push(block); }
@@ -325,10 +310,7 @@ app.get('/', (req, res) => {
         }
 
         async function endDay() {
-            if(confirm("Tüm veriler temizlenecek, emin misiniz?")) {
-                await fetch('/api/end-day', { method:'POST' });
-                initAdmin();
-            }
+            if(confirm("Tüm veriler temizlenecek?")) { await fetch('/api/end-day', { method:'POST' }); initAdmin(); }
         }
     </script>
 </body>
@@ -336,5 +318,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`Smart Minibar v16.7 Aktif: Port ${PORT}`));
-
+app.listen(PORT, '0.0.0.0', () => console.log(`v16.8 Aktif: ${PORT}`));
