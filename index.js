@@ -78,7 +78,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Minibar v17.2</title>
+    <title>Smart Minibar v17.3</title>
     <style>
         :root { --p: #2c3e50; --g: #2ecc71; --y: #f1c40f; --r: #e74c3c; --b: #3498db; --gr: #95a5a6; }
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
@@ -88,12 +88,19 @@ app.get('/', (req, res) => {
         input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-p { background: var(--p); color: white; width: 100%; margin: 5px 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin: 15px 0; }
-        .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; }
+        .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; position: relative; overflow: hidden; }
         
         .status-Müsait { background-color: var(--g) !important; color: white !important; border:none; }
         .status-Sonra { background-color: var(--y) !important; color: black !important; border:none; }
         .status-DND { background-color: var(--r) !important; color: white !important; border:none; }
         
+        /* Tarihçe Şeritleri */
+        .history-container { position: absolute; left: 0; top: 0; bottom: 0; display: flex; flex-direction: row; gap: 1px; padding: 2px; }
+        .h-bar { width: 4px; height: 100%; border-radius: 1px; }
+        .h-Müsait { background: var(--g); border: 0.5px solid white; }
+        .h-Sonra { background: var(--y); border: 0.5px solid white; }
+        .h-DND { background: var(--r); border: 0.5px solid white; }
+
         .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; overflow-x: auto; }
         .a-tab { flex: 1; padding: 10px; font-size: 11px; white-space: nowrap; background: none; }
         .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -198,7 +205,7 @@ app.get('/', (req, res) => {
         }
 
         function renderBlocks() {
-            selBlock = ""; selFloor = ""; // Reset navigasyon
+            selBlock = ""; selFloor = "";
             document.getElementById('staffContent').style.display='block'; document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='none';
             document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='none'; document.getElementById('blockTabs').style.display='grid';
             document.getElementById('blockTabs').innerHTML = hotelData.map(b => '<button class="btn-room" onclick="selectBlock(\\''+b.name+'\\')">Blok '+b.name+'</button>').join('');
@@ -232,7 +239,6 @@ app.get('/', (req, res) => {
 
         async function submitLog(status, details) {
             await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) });
-            // Veriyi sessizce güncelle ve aynı katta kal
             const lRes = await fetch('/api/logs'); logs = await lRes.json();
             selectFloor(selFloor); 
         }
@@ -251,21 +257,43 @@ app.get('/', (req, res) => {
             refreshLiveLogs();
         }
         function refreshLiveLogs() { document.getElementById('liveBody').innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join(''); }
+        
         function refreshMatrix() {
-            let h = ""; hotelData.forEach(b => {
-                h += '<h4>Blok '+b.name+'</h4>'; b.floors.forEach(f => {
+            let h = ""; 
+            hotelData.forEach(b => {
+                h += '<h4>Blok '+b.name+'</h4>'; 
+                b.floors.forEach(f => {
                     h += '<div style="margin-bottom:10px"><small>Kat '+f.name+'</small><div class="grid">';
-                    f.rooms.forEach(r => { const log = logs.find(l => String(l.room) === String(r)); const cls = log ? 'status-'+log.status : ''; h += '<div class="btn-room '+cls+'" onclick="showRoomDetail(\\''+r+'\\')">'+r+'</div>'; });
+                    f.rooms.forEach(r => { 
+                        // Odaya ait tüm kayıtları bul ve tarihe/saate göre sırala (en eski solda)
+                        const roomLogs = logs.filter(l => String(l.room) === String(r)).reverse();
+                        const lastLog = roomLogs[roomLogs.length - 1]; // En son durum
+                        const cls = lastLog ? 'status-' + lastLog.status : '';
+                        
+                        // Tarihçe şeritlerini oluştur
+                        let historyHtml = '<div class="history-container">';
+                        roomLogs.forEach(rl => {
+                            historyHtml += '<div class="h-bar h-'+rl.status+'"></div>';
+                        });
+                        historyHtml += '</div>';
+
+                        h += '<div class="btn-room '+cls+'" onclick="showRoomDetail(\\''+r+'\\')">' + historyHtml + r + '</div>'; 
+                    });
                     h += '</div></div>';
                 });
-            }); document.getElementById('matrixArea').innerHTML = h;
+            }); 
+            document.getElementById('matrixArea').innerHTML = h;
         }
+
         function showRoomDetail(r) {
-            const log = logs.find(l => String(l.room) === String(r));
-            document.getElementById('mTitle').innerText = "Oda " + r;
-            document.getElementById('mBody').innerHTML = log ? '<p><b>Durum:</b> '+log.status+'</p><p><b>Personel:</b> '+log.staff+'</p><p><b>Harcama:</b> '+log.details+'</p><p><b>Saat:</b> '+log.endTime+'</p>' : '<p>İşlem yapılmadı.</p>';
+            const roomLogs = logs.filter(l => String(l.room) === String(r));
+            document.getElementById('mTitle').innerText = "Oda " + r + " (Tarihçe)";
+            document.getElementById('mBody').innerHTML = roomLogs.length > 0 ? 
+                roomLogs.map(l => '<div style="border-bottom:1px solid #eee; padding:5px;"><b style="color:var(--p)">'+l.endTime+'</b>: '+l.status+' ('+l.staff+')<br><small>'+l.details+'</small></div>').join('') : 
+                '<p>İşlem yapılmadı.</p>';
             document.getElementById('modal').style.display='flex';
         }
+
         function switchAdminTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.a-tab').forEach(b => b.classList.remove('active'));
@@ -288,4 +316,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.2 Sabit Navigasyon Aktif: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.3 Tarihçe Şeritli Harita Aktif: ${PORT}`));
