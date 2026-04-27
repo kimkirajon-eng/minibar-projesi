@@ -115,11 +115,10 @@ app.get('/', (req, res) => {
         .status-Sonra { background-color: var(--y) !important; color: black !important; }
         .status-DND { background-color: var(--r) !important; color: white !important; }
         
-        /* Çizgiler için Güncelleme */
         .history-container { position: absolute; left: 0; top: 0; bottom: 0; display: flex; flex-direction: row; gap: 0px; padding: 0px; }
-        .h-bar { width: 6px; height: 100%; } /* Çizgi kalınlığı 6px yapıldı ve boyu buton sınırı kadar (100%) oldu */
-        
+        .h-bar { width: 6px; height: 100%; }
         .h-Müsait { background: var(--g); } .h-Sonra { background: var(--y); } .h-DND { background: var(--r); }
+        
         .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; overflow-x: auto; }
         .a-tab { flex: 1; padding: 10px; font-size: 11px; white-space: nowrap; background: none; }
         .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -177,7 +176,20 @@ app.get('/', (req, res) => {
             <button class="a-tab" onclick="switchAdminTab('t_end', this)">🧹 Gün Sonu</button>
             <button onclick="logout()">Çıkış</button>
         </div>
-        <div id="t_live" class="tab-content active"><table><thead><tr><th>Oda</th><th>P.</th><th>Durum</th><th>İçerik</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div>
+        <div id="t_live" class="tab-content active">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Oda</th>
+                        <th>P.</th>
+                        <th>Durum</th>
+                        <th>Ürünler</th> <!-- Ürün sütunu eklendi -->
+                        <th>Saat</th>
+                    </tr>
+                </thead>
+                <tbody id="liveBody"></tbody>
+            </table>
+        </div>
         <div id="t_matrix" class="tab-content">
             <button id="noteModeBtn" class="btn-p" onclick="toggleNoteMode()" style="background:var(--note)">📝 NOT EKLEME MODU: KAPALI</button>
             <div id="matrixArea"></div>
@@ -276,7 +288,7 @@ app.get('/', (req, res) => {
         }
 
         function processAndSubmit() {
-            let items = Object.entries(counts).filter(e => e > 0).map(e => e + " x" + e);
+            let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]);
             submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi");
         }
 
@@ -347,7 +359,10 @@ app.get('/', (req, res) => {
         }
         async function addProd() { await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:inP.value}) }); initAdmin(); inP.value=''; }
         async function endDay() { if(confirm("Sıfırla?")) { await fetch('/api/end-day', { method:'POST' }); location.reload(); } }
-        function refreshLiveLogs() { liveBody.innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join(''); }
+        function refreshLiveLogs() { 
+            // Tabloyu güncellerken Ürün (details) kısmını yeni sütuna yerleştirdik
+            liveBody.innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+(l.details || '-')+'</td><td>'+l.endTime+'</td></tr>').join(''); 
+        }
     </script>
 </body>
 </html>
