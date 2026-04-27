@@ -34,6 +34,7 @@ const readDB = (f) => {
 
 const writeDB = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
+// API ENDPOINTS
 app.post('/api/login', (req, res) => {
     const users = readDB(DB.users);
     const u = users.find(u => u.user === req.body.user && u.pass === req.body.pass);
@@ -243,12 +244,12 @@ app.get('/', (req, res) => {
         let currentUser = null, hotelData = [], products = [], logs = [], notes = {}, counts = {}, selRoom = "", selBlock = "", selFloor = "", noteMode = false;
 
         async function login() {
-            const userVal = document.getElementById('lUser').value;
-            const passVal = document.getElementById('lPass').value;
-            if(!userVal || !passVal) return alert("Bilgileri girin!");
-            const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:userVal, pass:passVal}) });
+            const u = document.getElementById('lUser').value;
+            const p = document.getElementById('lPass').value;
+            if(!u || !p) return alert("Giriş bilgilerini doldurun!");
+            const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:u, pass:p}) });
             const data = await res.json();
-            if(data.success) { currentUser = data; launchApp(); } else alert("Hatalı giriş!");
+            if(data.success) { currentUser = data; launchApp(); } else alert("Hatalı kullanıcı adı veya şifre!");
         }
 
         function logout() { location.reload(); }
@@ -261,7 +262,7 @@ app.get('/', (req, res) => {
                 initAdmin(); 
             } else { 
                 document.getElementById('staffPage').classList.add('active'); 
-                document.getElementById('sn').innerText = "P: " + currentUser.user; 
+                document.getElementById('sn').innerText = "Hoş geldin, " + currentUser.user; 
                 initStaff(); 
             }
         }
@@ -311,10 +312,17 @@ app.get('/', (req, res) => {
             if(notes[r]) { snv.style.display='block'; snv.innerText = "NOT: " + notes[r]; } else snv.style.display='none';
         }
 
-        function goBackToRooms() { document.getElementById('staffContent').style.display='block'; document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='none'; selectFloor(selFloor); }
+        function goBackToRooms() { 
+            document.getElementById('staffContent').style.display='block'; 
+            document.getElementById('statusScreen').style.display='none'; 
+            document.getElementById('productMenu').style.display='none'; 
+            selectFloor(selFloor); 
+        }
 
         function openProductMenu() {
-            document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='block'; counts = {}; products.forEach(p => counts[p.name] = 0);
+            document.getElementById('statusScreen').style.display='none'; 
+            document.getElementById('productMenu').style.display='block'; 
+            counts = {}; products.forEach(p => counts[p.name] = 0);
             document.getElementById('pGrid').innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd;padding:5px;text-align:center;border-radius:8px" onclick="counts[\''+p.name+'\']++; document.getElementById(\'c'+i+'\').innerText=counts[\''+p.name+'\']">'+p.name+'<br><small>Stok: '+(p.stok||0)+'</small><br><b id="c'+i+'" style="color:var(--b);font-size:20px">0</b></div>').join('');
         }
 
@@ -324,9 +332,9 @@ app.get('/', (req, res) => {
         }
 
         function processAndSubmit() {
-            let itmArr = Object.entries(counts).filter(e => e[1] > 0).map(e => ({ name: e[0], count: e[1] }));
-            let details = itmArr.length > 0 ? itmArr.map(i => i.name + " x" + i.count).join(", ") : "Kontrol Edildi";
-            submitLog('Müsait', details, itmArr);
+            let itms = Object.entries(counts).filter(e => e[1] > 0).map(e => ({ name: e[0], count: e[1] }));
+            let details = itms.length > 0 ? itms.map(i => i.name + " x" + i.count).join(", ") : "Kontrol Edildi";
+            submitLog('Müsait', details, itms);
         }
 
         async function initAdmin() {
@@ -348,7 +356,7 @@ app.get('/', (req, res) => {
             const body = { productName: document.getElementById('stokProdSelect').value, amount: document.getElementById('stokAmount').value, source: document.getElementById('stokSource').value, type: type };
             if(!body.amount || body.amount <= 0) return alert("Adet girin!");
             await fetch('/api/stok-islem', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-            document.getElementById('stokAmount').value = ""; autoUpdate(); alert("Kaydedildi.");
+            document.getElementById('stokAmount').value = ""; autoUpdate(); alert("İşlem başarıyla kaydedildi.");
         }
 
         function refreshMatrix() {
@@ -413,7 +421,8 @@ app.get('/', (req, res) => {
         }
         async function endDay() { if(confirm("Sıfırla?")) { await fetch('/api/end-day', { method:'POST' }); location.reload(); } }
         function refreshLiveLogs() { 
-            document.getElementById('liveBody').innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+(l.details || '-')+'</td><td>'+l.endTime+'</td></tr>').join(''); 
+            document.getElementById('liveBody').innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+(l.details || '-')+'</td><td>'+l.endTime+'
+</td></tr>').join(''); 
         }
     </script>
 </body>
@@ -422,4 +431,3 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Smart Minibar Hazır: http://localhost:${PORT}`));
-
