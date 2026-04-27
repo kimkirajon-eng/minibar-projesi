@@ -34,6 +34,7 @@ const readDB = (f) => {
 
 const writeDB = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
+// API ENDPOINTS
 app.post('/api/login', (req, res) => {
     const users = readDB(DB.users);
     const u = users.find(u => u.user === req.body.user && u.pass === req.body.pass);
@@ -46,7 +47,6 @@ app.post('/api/logs', (req, res) => {
     const logs = readDB(DB.logs);
     logs.unshift({ ...req.body, date: new Date().toLocaleDateString('tr-TR'), endTime: new Date().toLocaleTimeString('tr-TR') });
     writeDB(DB.logs, logs); 
-    
     if (req.body.items && Array.isArray(req.body.items)) {
         let products = readDB(DB.products);
         req.body.items.forEach(item => {
@@ -70,7 +70,6 @@ app.post('/api/stok-islem', (req, res) => {
         const islemMiktari = parseInt(amount);
         if(type === 'giris') p.stok = (p.stok || 0) + islemMiktari;
         else p.stok = (p.stok || 0) - islemMiktari;
-        
         stokLogs.unshift({
             productName,
             amount: type === 'giris' ? `+${amount}` : `-${amount}`,
@@ -118,6 +117,7 @@ app.get('/api/export', (req, res) => {
     res.send(buf);
 });
 
+// HTML/JS FRONTEND
 app.get('/', (req, res) => {
     res.send(`
 <!DOCTYPE html>
@@ -206,7 +206,7 @@ app.get('/', (req, res) => {
         </div>
         <div id="t_live" class="tab-content active"><table><thead><tr><th>Oda</th><th>P.</th><th>Durum</th><th>Ürünler</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div>
         <div id="t_matrix" class="tab-content">
-            <button id="noteModeBtn" class="btn-p" onclick="toggleNoteMode()" style="background:var(--note)">📝 NOT EKLEME MODU: KAPALI</button>
+            <button id="noteModeBtn" class="btn-p" onclick="toggleNoteMode()">📝 NOT EKLEME MODU: KAPALI</button>
             <div id="matrixArea"></div>
         </div>
         <div id="t_stok" class="tab-content">
@@ -232,84 +232,141 @@ app.get('/', (req, res) => {
             <table><thead><tr><th>Ürün</th><th>Miktar</th><th>Kaynak/Neden</th><th>Tarih/Saat</th></tr></thead><tbody id="stokHistoryBody"></tbody></table>
         </div>
         <div id="t_setup" class="tab-content">
-            <h4>Personel</h4><div id="uList"></div><input id="inUN" placeholder="Ad"><input id="inUP" placeholder="Şifre"><button class="btn-p" onclick="addStaff()">Ekle</button>
-            <h4>Yapı</h4><input id="inB" placeholder="Blok"><input id="inF" placeholder="Kat"><input id="inR" placeholder="Odalar (101,102)"><button class="btn-p" onclick="addStruct()">Kaydet</button>
-            <h4>Ürün</h4><div id="pList"></div><input id="inP" placeholder="Ürün Adı"><input id="inPS" type="number" placeholder="Başlangıç Stoğu"><button class="btn-p" onclick="addProd()">Ekle</button>
+            <h4>Personel</h4><div id="uList"></div>
+            <input id="inUN" placeholder="Ad">
+            <input id="inUP" placeholder="Şifre">
+            <button class="btn-p" onclick="addStaff()">Ekle</button>
+            <h4>Yapı</h4>
+            <input id="inB" placeholder="Blok">
+            <input id="inF" placeholder="Kat">
+            <input id="inR" placeholder="Odalar (101,102)">
+            <button class="btn-p" onclick="addStruct()">Kaydet</button>
+            <h4>Ürün</h4><div id="pList"></div>
+            <input id="inP" placeholder="Ürün Adı">
+            <input id="inPS" type="number" placeholder="Başlangıç Stoğu">
+            <button class="btn-p" onclick="addProd()">Ekle</button>
         </div>
-        <div id="t_end" class="tab-content" style="text-align:center"><button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g)">EXCEL İNDİR</button><button class="btn-p" onclick="endDay()" style="background:var(--r)">SIFIRLA</button></div>
+        <div id="t_end" class="tab-content" style="text-align:center">
+            <button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g)">EXCEL İNDİR</button>
+            <button class="btn-p" onclick="endDay()" style="background:var(--r)">SIFIRLA</button>
+        </div>
     </div>
 
     <script>
         let currentUser = null, hotelData = [], products = [], logs = [], notes = {}, counts = {}, selRoom = "", selBlock = "", selFloor = "", noteMode = false;
 
         async function login() {
-            const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:lUser.value, pass:lPass.value}) });
+            const userVal = document.getElementById('lUser').value;
+            const passVal = document.getElementById('lPass').value;
+            if(!userVal || !passVal) return alert("Bilgileri girin!");
+
+            const res = await fetch('/api/login', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({user:userVal, pass:passVal})
+            });
             const data = await res.json();
-            if(data.success) { currentUser = data; launchApp(); } else alert("Hata!");
+            if(data.success) { currentUser = data; launchApp(); }
+            else alert("Hatalı giriş!");
         }
 
         function logout() { location.reload(); }
 
         function launchApp() {
-            loginPage.classList.remove('active');
+            document.getElementById('loginPage').classList.remove('active');
             setInterval(autoUpdate, 5000);
-            if(currentUser.role === 'admin') { adminPage.classList.add('active'); initAdmin(); }
-            else { staffPage.classList.add('active'); sn.innerText = "P: " + currentUser.user; initStaff(); }
+            if(currentUser.role === 'admin') {
+                document.getElementById('adminPage').classList.add('active');
+                initAdmin();
+            } else {
+                document.getElementById('staffPage').classList.add('active');
+                document.getElementById('sn').innerText = "Hoş geldin, " + currentUser.user;
+                initStaff();
+            }
         }
 
         async function autoUpdate() {
-            const [l, n, p] = await Promise.all([fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json()), fetch('/api/products').then(r=>r.json())]);
+            const [l, n, p] = await Promise.all([
+                fetch('/api/logs').then(r=>r.json()),
+                fetch('/api/notes').then(r=>r.json()),
+                fetch('/api/products').then(r=>r.json())
+            ]);
             logs = l; notes = n; products = p;
-            if(staffPage.classList.contains('active') && view_rooms.style.display === 'grid') selectFloor(selFloor);
-            if(adminPage.classList.contains('active')) {
-                if(t_live.classList.contains('active')) refreshLiveLogs();
-                if(t_matrix.classList.contains('active')) refreshMatrix();
-                if(t_stok.classList.contains('active')) refreshStokTab();
+            if(document.getElementById('staffPage').classList.contains('active') && document.getElementById('view_rooms').style.display === 'grid') selectFloor(selFloor);
+            if(document.getElementById('adminPage').classList.contains('active')) {
+                if(document.getElementById('t_live').classList.contains('active')) refreshLiveLogs();
+                if(document.getElementById('t_matrix').classList.contains('active')) refreshMatrix();
+                if(document.getElementById('t_stok').classList.contains('active')) refreshStokTab();
             }
         }
 
         async function initStaff() {
-            const [s, p, l, n] = await Promise.all([fetch('/api/structure').then(r=>r.json()), fetch('/api/products').then(r=>r.json()), fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json())]);
-            hotelData = s; products = p; logs = l; notes = n; renderBlocks();
+            const [s, p, l, n] = await Promise.all([
+                fetch('/api/structure').then(r=>r.json()),
+                fetch('/api/products').then(r=>r.json()),
+                fetch('/api/logs').then(r=>r.json()),
+                fetch('/api/notes').then(r=>r.json())
+            ]);
+            hotelData = s; products = p; logs = l; notes = n;
+            renderBlocks();
         }
 
         function renderBlocks() {
-            blockTabs.style.display='grid'; view_floors.style.display='none'; view_rooms.style.display='none';
-            blockTabs.innerHTML = hotelData.map(b => '<button class="btn-room" onclick="selectBlock(\''+b.name+'\')">'+b.name+'</button>').join('');
+            document.getElementById('blockTabs').style.display='grid';
+            document.getElementById('view_floors').style.display='none';
+            document.getElementById('view_rooms').style.display='none';
+            document.getElementById('blockTabs').innerHTML = hotelData.map(b => '<button class="btn-room" onclick="selectBlock(\\''+b.name+'\\')">'+b.name+'</button>').join('');
         }
 
         function selectBlock(n) {
             selBlock = n; const b = hotelData.find(x => x.name === n);
-            blockTabs.style.display='none'; view_floors.style.display='grid';
-            view_floors.innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b);color:#fff" onclick="selectFloor(\''+f.name+'\')">'+f.name+'. Kat</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">Geri</button>';
+            document.getElementById('blockTabs').style.display='none';
+            document.getElementById('view_floors').style.display='grid';
+            document.getElementById('view_floors').innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b);color:#fff" onclick="selectFloor(\\''+f.name+'\\')">'+f.name+'. Kat</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">Geri</button>';
         }
 
         function selectFloor(n) {
             selFloor = n; const f = hotelData.find(x => x.name === selBlock).floors.find(x => x.name === n);
-            view_floors.style.display='none'; view_rooms.style.display='grid';
-            view_rooms.innerHTML = f.rooms.map(r => {
+            document.getElementById('view_floors').style.display='none';
+            document.getElementById('view_rooms').style.display='grid';
+            document.getElementById('view_rooms').innerHTML = f.rooms.map(r => {
                 const log = logs.find(l => String(l.room) === String(r));
                 const noteCls = notes[r] ? 'note-bg has-note' : '';
-                return '<button class="btn-room '+(log?'status-'+log.status:'')+' '+noteCls+'" onclick="openStatusMenu(\''+r+'\')">'+r+'</button>';
-            }).join('') + '<button class="btn-p" onclick="selectBlock(\''+selBlock+'\')">Geri</button>';
+                return '<button class="btn-room '+(log?'status-'+log.status:'')+' '+noteCls+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>';
+            }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+selBlock+'\\')">Geri</button>';
         }
 
         function openStatusMenu(r) {
-            selRoom = r; staffContent.style.display='none'; statusScreen.style.display='block'; productMenu.style.display='none';
-            targetRoomTitle.innerText = "Oda " + r;
-            if(notes[r]) { staffNoteView.style.display='block'; staffNoteView.innerText = "YÖNETİCİ NOTU: " + notes[r]; }
-            else { staffNoteView.style.display='none'; }
+            selRoom = r;
+            document.getElementById('staffContent').style.display='none';
+            document.getElementById('statusScreen').style.display='block';
+            document.getElementById('targetRoomTitle').innerText = "Oda " + r;
+            if(notes[r]) {
+                document.getElementById('staffNoteView').style.display='block';
+                document.getElementById('staffNoteView').innerText = "NOT: " + notes[r];
+            } else document.getElementById('staffNoteView').style.display='none';
         }
 
-        function goBackToRooms() { staffContent.style.display='block'; statusScreen.style.display='none'; selectFloor(selFloor); }
+        function goBackToRooms() {
+            document.getElementById('staffContent').style.display='block';
+            document.getElementById('statusScreen').style.display='none';
+            document.getElementById('productMenu').style.display='none';
+            selectFloor(selFloor);
+        }
 
         function openProductMenu() {
-            statusScreen.style.display='none'; productMenu.style.display='block'; counts = {}; products.forEach(p => counts[p.name] = 0);
-            pGrid.innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd;padding:5px;text-align:center;border-radius:8px" onclick="counts[\''+p.name+'\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\''+p.name+'\']">'+p.name+'<br><small>Stok: '+(p.stok||0)+'</small><br><b id="c'+i+'" style="color:var(--b);font-size:20px">0</b></div>').join('');
+            document.getElementById('statusScreen').style.display='none';
+            document.getElementById('productMenu').style.display='block';
+            counts = {}; products.forEach(p => counts[p.name] = 0);
+            document.getElementById('pGrid').innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd;padding:5px;text-align:center;border-radius:8px" onclick="counts[\\''+p.name+'\\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><small>Stok: '+(p.stok||0)+'</small><br><b id="c'+i+'" style="color:var(--b);font-size:20px">0</b></div>').join('');
         }
 
         async function submitLog(status, details, items = []) {
-            await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:selRoom, status, details, items, staff:currentUser.user}) });
+            await fetch('/api/logs', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({room:selRoom, status, details, items, staff:currentUser.user})
+            });
             goBackToRooms();
         }
 
@@ -320,27 +377,38 @@ app.get('/', (req, res) => {
         }
 
         async function initAdmin() {
-            const [p, s, u, l, n] = await Promise.all([fetch('/api/products').then(r=>r.json()), fetch('/api/structure').then(r=>r.json()), fetch('/api/users').then(r=>r.json()), fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json())]);
+            const [p, s, u, l, n] = await Promise.all([
+                fetch('/api/products').then(r=>r.json()),
+                fetch('/api/structure').then(r=>r.json()),
+                fetch('/api/users').then(r=>r.json()),
+                fetch('/api/logs').then(r=>r.json()),
+                fetch('/api/notes').then(r=>r.json())
+            ]);
             products = p; hotelData = s; logs = l; notes = n;
-            uList.innerHTML = u.filter(x => x.role !== 'admin').map(x => '<div>'+x.user+' <button onclick="delUser(\''+x.user+'\')">Sil</button></div>').join('');
-            pList.innerHTML = products.map(x => x.name + " (" + (x.stok||0) + ")").join(', ');
+            document.getElementById('uList').innerHTML = u.filter(x => x.role !== 'admin').map(x => '<div>'+x.user+' <button onclick="delUser(\\''+x.user+'\\')">Sil</button></div>').join('');
+            document.getElementById('pList').innerHTML = products.map(x => x.name + " (" + (x.stok||0) + ")").join(', ');
             refreshStokTab();
         }
 
         async function refreshStokTab() {
-            stokProdSelect.innerHTML = products.map(p => '<option value="'+p.name+'">'+p.name+'</option>').join('');
-            stokListBody.innerHTML = products.map(p => '<tr><td>'+p.name+'</td><td class="'+(p.stok < 10 ? 'stok-kritik' : '')+'">'+(p.stok || 0)+'</td></tr>').join('');
+            document.getElementById('stokProdSelect').innerHTML = products.map(p => '<option value="'+p.name+'">'+p.name+'</option>').join('');
+            document.getElementById('stokListBody').innerHTML = products.map(p => '<tr><td>'+p.name+'</td><td class="'+(p.stok < 10 ? 'stok-kritik' : '')+'">'+(p.stok || 0)+'</td></tr>').join('');
             const sh = await fetch('/api/stok-logs').then(r=>r.json());
-            stokHistoryBody.innerHTML = sh.map(h => '<tr><td>'+h.productName+'</td><td style="color:'+(h.amount.startsWith('+') ? 'green' : 'red')+'">'+h.amount+'</td><td>'+h.source+'</td><td>'+h.date+' '+h.time+'</td></tr>').join('');
+            document.getElementById('stokHistoryBody').innerHTML = sh.map(h => '<tr><td>'+h.productName+'</td><td style="color:'+(h.amount.startsWith('+') ? 'green' : 'red')+'">'+h.amount+'</td><td>'+h.source+'</td><td>'+h.date+' '+h.time+'</td></tr>').join('');
         }
 
         async function submitStokIslem(type) {
-            const body = { productName: stokProdSelect.value, amount: stokAmount.value, source: stokSource.value, type: type };
-            if(!body.amount || body.amount <= 0) return alert("Adet giriniz!");
+            const body = {
+                productName: document.getElementById('stokProdSelect').value,
+                amount: document.getElementById('stokAmount').value,
+                source: document.getElementById('stokSource').value,
+                type: type
+            };
+            if(!body.amount || body.amount <= 0) return alert("Adet girin!");
             await fetch('/api/stok-islem', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
-            stokAmount.value = "";
+            document.getElementById('stokAmount').value = "";
             autoUpdate();
-            alert("İşlem kaydedildi.");
+            alert("İşlem tamam.");
         }
 
         function refreshMatrix() {
@@ -354,26 +422,26 @@ app.get('/', (req, res) => {
                         const lastLog = roomLogs[roomLogs.length-1];
                         const noteCls = notes[r] ? 'note-bg has-note' : '';
                         let hist = '<div class="history-container">' + roomLogs.map(rl => '<div class="h-bar h-'+rl.status+'"></div>').join('') + '</div>';
-                        h += '<div class="btn-room '+(lastLog?'status-'+lastLog.status:'')+' '+noteCls+'" onclick="handleMatrixClick(\''+r+'\')">'+hist+r+'</div>';
+                        h += '<div class="btn-room '+(lastLog?'status-'+lastLog.status:'')+' '+noteCls+'" onclick="handleMatrixClick(\\''+r+'\\')">'+hist+r+'</div>';
                     });
                     h += '</div>';
                 });
             });
-            matrixArea.innerHTML = h;
+            document.getElementById('matrixArea').innerHTML = h;
         }
 
         function handleMatrixClick(r) {
             if(noteMode) {
-                const n = prompt(r + " odası için notunuz:");
+                const n = prompt(r + " için not:");
                 if(n !== null) fetch('/api/notes', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:r, note:n}) }).then(() => autoUpdate());
             } else showRoomDetail(r);
         }
 
         function showRoomDetail(r) {
             const roomLogs = logs.filter(l => String(l.room) === String(r));
-            mTitle.innerText = "Oda " + r + " Tarihçesi";
-            mBody.innerHTML = (notes[r] ? '<div class="staff-note-box">GÜNCEL NOT: '+notes[r]+'</div>' : '') + roomLogs.map(l => '<div><b>'+l.endTime+'</b>: '+l.status+' ('+l.staff+')<br><small>'+l.details+'</small></div>').join('<hr>');
-            modal.style.display='flex';
+            document.getElementById('mTitle').innerText = "Oda " + r + " Tarihçesi";
+            document.getElementById('mBody').innerHTML = (notes[r] ? '<div class="staff-note-box">NOT: '+notes[r]+'</div>' : '') + roomLogs.map(l => '<div><b>'+l.endTime+'</b>: '+l.status+' ('+l.staff+')<br><small>'+l.details+'</small></div>').join('<hr>');
+            document.getElementById('modal').style.display='flex';
         }
 
         function switchAdminTab(id, btn) {
@@ -386,28 +454,36 @@ app.get('/', (req, res) => {
 
         function toggleNoteMode() {
             noteMode = !noteMode;
-            noteModeBtn.innerText = noteMode ? "📝 NOT EKLEME MODU: AÇIK" : "📝 NOT EKLEME MODU: KAPALI";
-            noteModeBtn.style.background = noteMode ? "var(--r)" : "var(--note)";
+            document.getElementById('noteModeBtn').innerText = noteMode ? "📝 NOT EKLEME MODU: AÇIK" : "📝 NOT EKLEME MODU: KAPALI";
+            document.getElementById('noteModeBtn').style.background = noteMode ? "var(--r)" : "var(--note)";
         }
 
-        async function addStaff() { await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:inUN.value, pass:inUP.value}) }); initAdmin(); inUN.value=''; inUP.value=''; }
+        async function addStaff() { await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:document.getElementById('inUN').value, pass:document.getElementById('inUP').value}) }); initAdmin(); }
         async function delUser(n) { if(confirm('Sil?')) { await fetch('/api/users/'+n, { method:'DELETE' }); initAdmin(); } }
         async function addStruct() {
-            let s = hotelData; let b = s.find(x => x.name === inB.value);
-            if(!b) { b = {name: inB.value, floors: []}; s.push(b); }
-            b.floors.push({name: inF.value, rooms: inR.value.split(',').map(x => x.trim())});
+            let s = hotelData; let b = s.find(x => x.name === document.getElementById('inB').value);
+            if(!b) { b = {name: document.getElementById('inB').value, floors: []}; s.push(b); }
+            b.floors.push({name: document.getElementById('inF').value, rooms: document.getElementById('inR').value.split(',').map(x => x.trim())});
             await fetch('/api/structure', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s) }); initAdmin();
         }
-        async function addProd() { 
-            let p = products; p.push({name:inP.value, stok: parseInt(inPS.value)||0});
-            await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p) }); initAdmin(); inP.value=''; inPS.value=''; 
+        async function addProd() {
+            let p = products; p.push({name:document.getElementById('inP').value, stok: parseInt(document.getElementById('inPS').value)||0});
+            await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(p) }); initAdmin();
         }
         async function endDay() { if(confirm("Sıfırla?")) { await fetch('/api/end-day', { method:'POST' }); location.reload(); } }
-        function refreshLiveLogs() { liveBody.innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+(l.details || '-')+'</td><td>'+l.endTime+'</td></tr>').join(''); }
+        function refreshLiveLogs() { document.getElementById('live
+
+        function refreshLiveLogs() { 
+            document.getElementById('liveBody').innerHTML = logs.map(l => 
+                '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+(l.details || '-')+'</td><td>'+l.endTime+'</td></tr>'
+            ).join(''); 
+        }
     </script>
 </body>
 </html>
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`Smart Minibar Hazır: ${PORT}`));
+// Sunucuyu başlat
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Smart Minibar Hazır: http://localhost:${PORT}`));
+
