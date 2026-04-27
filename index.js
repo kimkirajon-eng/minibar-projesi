@@ -7,7 +7,6 @@ const XLSX = require('xlsx');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Veri Klasörü ve Dosya Yolları
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
@@ -22,7 +21,6 @@ const DB = {
 
 app.use(bodyParser.json());
 
-// Veritabanı Yardımcı Fonksiyonları
 const readDB = (f) => {
     if (!fs.existsSync(f)) {
         if (f === DB.users) return [{ user: 'hakkı', pass: '2125', role: 'admin' }];
@@ -36,7 +34,6 @@ const readDB = (f) => {
 
 const writeDB = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
-// --- API ENDPOINTS ---
 app.post('/api/login', (req, res) => {
     const users = readDB(DB.users);
     const u = users.find(u => u.user === req.body.user && u.pass === req.body.pass);
@@ -58,31 +55,25 @@ app.post('/api/logs', (req, res) => {
         });
         writeDB(DB.products, products);
     }
-
     let notes = readDB(DB.notes);
     delete notes[req.body.room];
     writeDB(DB.notes, notes);
     res.json({ success: true });
 });
 
-// Stok Giriş/Çıkış API (Geliştirildi)
 app.post('/api/stok-islem', (req, res) => {
     let products = readDB(DB.products);
     let stokLogs = readDB(DB.stokLogs);
-    
-    const { productName, amount, source, type } = req.body; // type: 'giris' veya 'cikis'
+    const { productName, amount, source, type } = req.body;
     let p = products.find(x => x.name === productName);
     if(p) {
         const islemMiktari = parseInt(amount);
-        if(type === 'giris') {
-            p.stok = (p.stok || 0) + islemMiktari;
-        } else {
-            p.stok = (p.stok || 0) - islemMiktari;
-        }
+        if(type === 'giris') p.stok = (p.stok || 0) + islemMiktari;
+        else p.stok = (p.stok || 0) - islemMiktari;
         
         stokLogs.unshift({
             productName,
-            amount: type === 'giris' ? \`+\${amount}\` : \`-\${amount}\`,
+            amount: type === 'giris' ? `+${amount}` : `-${amount}`,
             source,
             date: new Date().toLocaleDateString('tr-TR'),
             time: new Date().toLocaleTimeString('tr-TR')
@@ -127,7 +118,6 @@ app.get('/api/export', (req, res) => {
     res.send(buf);
 });
 
-// --- FRONTEND ---
 app.get('/', (req, res) => {
     res.send(`
 <!DOCTYPE html>
@@ -285,13 +275,13 @@ app.get('/', (req, res) => {
 
         function renderBlocks() {
             blockTabs.style.display='grid'; view_floors.style.display='none'; view_rooms.style.display='none';
-            blockTabs.innerHTML = hotelData.map(b => '<button class="btn-room" onclick="selectBlock(\\''+b.name+'\\')">'+b.name+'</button>').join('');
+            blockTabs.innerHTML = hotelData.map(b => '<button class="btn-room" onclick="selectBlock(\''+b.name+'\')">'+b.name+'</button>').join('');
         }
 
         function selectBlock(n) {
             selBlock = n; const b = hotelData.find(x => x.name === n);
             blockTabs.style.display='none'; view_floors.style.display='grid';
-            view_floors.innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b);color:#fff" onclick="selectFloor(\\''+f.name+'\\')">'+f.name+'. Kat</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">Geri</button>';
+            view_floors.innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b);color:#fff" onclick="selectFloor(\''+f.name+'\')">'+f.name+'. Kat</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">Geri</button>';
         }
 
         function selectFloor(n) {
@@ -300,8 +290,8 @@ app.get('/', (req, res) => {
             view_rooms.innerHTML = f.rooms.map(r => {
                 const log = logs.find(l => String(l.room) === String(r));
                 const noteCls = notes[r] ? 'note-bg has-note' : '';
-                return '<button class="btn-room '+(log?'status-'+log.status:'')+' '+noteCls+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>';
-            }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+selBlock+'\\')">Geri</button>';
+                return '<button class="btn-room '+(log?'status-'+log.status:'')+' '+noteCls+'" onclick="openStatusMenu(\''+r+'\')">'+r+'</button>';
+            }).join('') + '<button class="btn-p" onclick="selectBlock(\''+selBlock+'\')">Geri</button>';
         }
 
         function openStatusMenu(r) {
@@ -315,7 +305,7 @@ app.get('/', (req, res) => {
 
         function openProductMenu() {
             statusScreen.style.display='none'; productMenu.style.display='block'; counts = {}; products.forEach(p => counts[p.name] = 0);
-            pGrid.innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd;padding:5px;text-align:center;border-radius:8px" onclick="counts[\\''+p.name+'\\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><small>Stok: '+(p.stok||0)+'</small><br><b id="c'+i+'" style="color:var(--b);font-size:20px">0</b></div>').join('');
+            pGrid.innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd;padding:5px;text-align:center;border-radius:8px" onclick="counts[\''+p.name+'\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\''+p.name+'\']">'+p.name+'<br><small>Stok: '+(p.stok||0)+'</small><br><b id="c'+i+'" style="color:var(--b);font-size:20px">0</b></div>').join('');
         }
 
         async function submitLog(status, details, items = []) {
@@ -324,26 +314,24 @@ app.get('/', (req, res) => {
         }
 
         function processAndSubmit() {
-            let items = Object.entries(counts).filter(e => e > 0).map(e => ({ name: e, count: e }));
+            let items = Object.entries(counts).filter(e => e[1] > 0).map(e => ({ name: e[0], count: e[1] }));
             let details = items.length > 0 ? items.map(i => i.name + " x" + i.count).join(", ") : "Kontrol Edildi";
             submitLog('Müsait', details, items);
         }
 
-        // --- ADMIN FUNCTIONS ---
         async function initAdmin() {
             const [p, s, u, l, n] = await Promise.all([fetch('/api/products').then(r=>r.json()), fetch('/api/structure').then(r=>r.json()), fetch('/api/users').then(r=>r.json()), fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json())]);
             products = p; hotelData = s; logs = l; notes = n;
-            uList.innerHTML = u.filter(x => x.role !== 'admin').map(x => '<div>'+x.user+' <button onclick="delUser(\\''+x.user+'\\')">Sil</button></div>').join('');
+            uList.innerHTML = u.filter(x => x.role !== 'admin').map(x => '<div>'+x.user+' <button onclick="delUser(\''+x.user+'\')">Sil</button></div>').join('');
             pList.innerHTML = products.map(x => x.name + " (" + (x.stok||0) + ")").join(', ');
             refreshStokTab();
         }
 
         async function refreshStokTab() {
-            stokProdSelect.innerHTML = products.map(p => \`<option value="\${p.name}">\${p.name}</option>\`).join('');
-            stokListBody.innerHTML = products.map(p => \`<tr><td>\${p.name}</td><td class="\${p.stok < 10 ? 'stok-kritik' : ''}">\${p.stok || 0}</td></tr>\`).join('');
-            
+            stokProdSelect.innerHTML = products.map(p => '<option value="'+p.name+'">'+p.name+'</option>').join('');
+            stokListBody.innerHTML = products.map(p => '<tr><td>'+p.name+'</td><td class="'+(p.stok < 10 ? 'stok-kritik' : '')+'">'+(p.stok || 0)+'</td></tr>').join('');
             const sh = await fetch('/api/stok-logs').then(r=>r.json());
-            stokHistoryBody.innerHTML = sh.map(h => \`<tr><td>\${h.productName}</td><td style="color:\${h.amount.startsWith('+') ? 'green' : 'red'}">\${h.amount}</td><td>\${h.source}</td><td>\${h.date} \${h.time}</td></tr>\`).join('');
+            stokHistoryBody.innerHTML = sh.map(h => '<tr><td>'+h.productName+'</td><td style="color:'+(h.amount.startsWith('+') ? 'green' : 'red')+'">'+h.amount+'</td><td>'+h.source+'</td><td>'+h.date+' '+h.time+'</td></tr>').join('');
         }
 
         async function submitStokIslem(type) {
@@ -352,7 +340,7 @@ app.get('/', (req, res) => {
             await fetch('/api/stok-islem', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
             stokAmount.value = "";
             autoUpdate();
-            alert("İşlem başarıyla kaydedildi.");
+            alert("İşlem kaydedildi.");
         }
 
         function refreshMatrix() {
@@ -366,7 +354,7 @@ app.get('/', (req, res) => {
                         const lastLog = roomLogs[roomLogs.length-1];
                         const noteCls = notes[r] ? 'note-bg has-note' : '';
                         let hist = '<div class="history-container">' + roomLogs.map(rl => '<div class="h-bar h-'+rl.status+'"></div>').join('') + '</div>';
-                        h += '<div class="btn-room '+(lastLog?'status-'+lastLog.status:'')+' '+noteCls+'" onclick="handleMatrixClick(\\''+r+'\\')">'+hist+r+'</div>';
+                        h += '<div class="btn-room '+(lastLog?'status-'+lastLog.status:'')+' '+noteCls+'" onclick="handleMatrixClick(\''+r+'\')">'+hist+r+'</div>';
                     });
                     h += '</div>';
                 });
@@ -422,4 +410,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Ürün Çıkışı Aktif: http://localhost:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Smart Minibar Hazır: ${PORT}`));
