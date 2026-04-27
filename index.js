@@ -17,7 +17,7 @@ const DB = {
     products: path.join(DATA_DIR, 'products.json'),
     structure: path.join(DATA_DIR, 'structure.json'),
     notes: path.join(DATA_DIR, 'notes.json'),
-    stokLogs: path.join(DATA_DIR, 'stokLogs.json') // Yeni: Stok hareket geçmişi
+    stokLogs: path.join(DATA_DIR, 'stokLogs.json')
 };
 
 app.use(bodyParser.json());
@@ -65,18 +65,24 @@ app.post('/api/logs', (req, res) => {
     res.json({ success: true });
 });
 
-// Yeni: Stok Giriş Kaydı API
-app.post('/api/stok-giris', (req, res) => {
+// Stok Giriş/Çıkış API (Geliştirildi)
+app.post('/api/stok-islem', (req, res) => {
     let products = readDB(DB.products);
     let stokLogs = readDB(DB.stokLogs);
     
-    const { productName, amount, source } = req.body;
+    const { productName, amount, source, type } = req.body; // type: 'giris' veya 'cikis'
     let p = products.find(x => x.name === productName);
     if(p) {
-        p.stok = (p.stok || 0) + parseInt(amount);
+        const islemMiktari = parseInt(amount);
+        if(type === 'giris') {
+            p.stok = (p.stok || 0) + islemMiktari;
+        } else {
+            p.stok = (p.stok || 0) - islemMiktari;
+        }
+        
         stokLogs.unshift({
             productName,
-            amount,
+            amount: type === 'giris' ? \`+\${amount}\` : \`-\${amount}\`,
             source,
             date: new Date().toLocaleDateString('tr-TR'),
             time: new Date().toLocaleTimeString('tr-TR')
@@ -203,7 +209,7 @@ app.get('/', (req, res) => {
         <div class="admin-tabs">
             <button class="a-tab active" onclick="switchAdminTab('t_live', this)">👁️ Canlı</button>
             <button class="a-tab" onclick="switchAdminTab('t_matrix', this)">🏢 Harita</button>
-            <button class="a-tab" onclick="switchAdminTab('t_stok', this)">📦 Stok Giriş</button>
+            <button class="a-tab" onclick="switchAdminTab('t_stok', this)">📦 Stok İşlem</button>
             <button class="a-tab" onclick="switchAdminTab('t_setup', this)">⚙️ Ayarlar</button>
             <button class="a-tab" onclick="switchAdminTab('t_end', this)">🧹 Gün Sonu</button>
             <button onclick="logout()">Çıkış</button>
@@ -215,20 +221,25 @@ app.get('/', (req, res) => {
         </div>
         <div id="t_stok" class="tab-content">
             <div class="stok-form">
-                <h4>➕ Ürün Girişi Yap</h4>
+                <h4>➕ Ürün Giriş / Çıkış Yap</h4>
                 <select id="stokProdSelect"></select>
                 <input id="stokAmount" type="number" placeholder="Adet">
                 <select id="stokSource">
                     <option value="Ana Depo">Ana Depo</option>
                     <option value="Satın Alma">Satın Alma</option>
-                    <option value="Diğer">Diğer</option>
+                    <option value="Fire / Zayi">Fire / Zayi</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Düzeltme">Düzeltme</option>
                 </select>
-                <button class="btn-p" style="background:var(--g)" onclick="submitStokGiris()">Stoğa İlave Et</button>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-p" style="background:var(--g); flex:1" onclick="submitStokIslem('giris')">Stoğa Ekle (+)</button>
+                    <button class="btn-p" style="background:var(--r); flex:1" onclick="submitStokIslem('cikis')">Stoktan Çıkar (-)</button>
+                </div>
             </div>
             <h4>Güncel Stok Listesi</h4>
             <table><thead><tr><th>Ürün</th><th>Mevcut Stok</th></tr></thead><tbody id="stokListBody"></tbody></table>
             <h4 style="margin-top:20px;">📜 Son Stok Hareketleri</h4>
-            <table><thead><tr><th>Ürün</th><th>Adet</th><th>Kaynak</th><th>Tarih/Saat</th></tr></thead><tbody id="stokHistoryBody"></tbody></table>
+            <table><thead><tr><th>Ürün</th><th>Miktar</th><th>Kaynak/Neden</th><th>Tarih/Saat</th></tr></thead><tbody id="stokHistoryBody"></tbody></table>
         </div>
         <div id="t_setup" class="tab-content">
             <h4>Personel</h4><div id="uList"></div><input id="inUN" placeholder="Ad"><input id="inUP" placeholder="Şifre"><button class="btn-p" onclick="addStaff()">Ekle</button>
@@ -313,7 +324,7 @@ app.get('/', (req, res) => {
         }
 
         function processAndSubmit() {
-            let items = Object.entries(counts).filter(e => e[1] > 0).map(e => ({ name: e[0], count: e[1] }));
+            let items = Object.entries(counts).filter(e => e > 0).map(e => ({ name: e, count: e }));
             let details = items.length > 0 ? items.map(i => i.name + " x" + i.count).join(", ") : "Kontrol Edildi";
             submitLog('Müsait', details, items);
         }
@@ -332,16 +343,16 @@ app.get('/', (req, res) => {
             stokListBody.innerHTML = products.map(p => \`<tr><td>\${p.name}</td><td class="\${p.stok < 10 ? 'stok-kritik' : ''}">\${p.stok || 0}</td></tr>\`).join('');
             
             const sh = await fetch('/api/stok-logs').then(r=>r.json());
-            stokHistoryBody.innerHTML = sh.map(h => \`<tr><td>\${h.productName}</td><td>+\${h.amount}</td><td>\${h.source}</td><td>\${h.date} \${h.time}</td></tr>\`).join('');
+            stokHistoryBody.innerHTML = sh.map(h => \`<tr><td>\${h.productName}</td><td style="color:\${h.amount.startsWith('+') ? 'green' : 'red'}">\${h.amount}</td><td>\${h.source}</td><td>\${h.date} \${h.time}</td></tr>\`).join('');
         }
 
-        async function submitStokGiris() {
-            const body = { productName: stokProdSelect.value, amount: stokAmount.value, source: stokSource.value };
+        async function submitStokIslem(type) {
+            const body = { productName: stokProdSelect.value, amount: stokAmount.value, source: stokSource.value, type: type };
             if(!body.amount || body.amount <= 0) return alert("Adet giriniz!");
-            await fetch('/api/stok-giris', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+            await fetch('/api/stok-islem', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
             stokAmount.value = "";
             autoUpdate();
-            alert("Stok başarıyla güncellendi.");
+            alert("İşlem başarıyla kaydedildi.");
         }
 
         function refreshMatrix() {
@@ -411,4 +422,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Stok Yönetimi Aktif: http://localhost:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Ürün Çıkışı Aktif: http://localhost:${PORT}`));
