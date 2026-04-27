@@ -108,14 +108,17 @@ app.get('/', (req, res) => {
         input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-p { background: var(--p); color: white; width: 100%; margin: 5px 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin: 15px 0; }
-        .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; position: relative; }
+        .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; position: relative; overflow: hidden; }
         .has-note::after { content: "💬"; position: absolute; top: -5px; right: -2px; font-size: 14px; z-index: 10; }
         .note-bg { background-color: #fce4ec !important; border: 2px solid var(--note) !important; }
         .status-Müsait { background-color: var(--g) !important; color: white !important; }
         .status-Sonra { background-color: var(--y) !important; color: black !important; }
         .status-DND { background-color: var(--r) !important; color: white !important; }
-        .history-container { position: absolute; left: 0; top: 0; bottom: 0; display: flex; flex-direction: row; gap: 1px; padding: 2px; }
-        .h-bar { width: 3px; height: 100%; border-radius: 1px; }
+        
+        /* Çizgiler için Güncelleme */
+        .history-container { position: absolute; left: 0; top: 0; bottom: 0; display: flex; flex-direction: row; gap: 0px; padding: 0px; }
+        .h-bar { width: 6px; height: 100%; } /* Çizgi kalınlığı 6px yapıldı ve boyu buton sınırı kadar (100%) oldu */
+        
         .h-Müsait { background: var(--g); } .h-Sonra { background: var(--y); } .h-DND { background: var(--r); }
         .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; overflow-x: auto; }
         .a-tab { flex: 1; padding: 10px; font-size: 11px; white-space: nowrap; background: none; }
@@ -200,7 +203,7 @@ app.get('/', (req, res) => {
 
         function launchApp() {
             loginPage.classList.remove('active');
-            setInterval(autoUpdate, 5000); // OTOMATİK GÜNCELLEME BURADA BAŞLIYOR (HER 5 SN)
+            setInterval(autoUpdate, 5000);
 
             if(currentUser.role === 'admin') { 
                 adminPage.classList.add('active'); 
@@ -217,12 +220,10 @@ app.get('/', (req, res) => {
             const [l, n] = await Promise.all([fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json())]);
             logs = l; notes = n;
             
-            // Personel Ekranı Güncelleme (Not anında düşsün diye)
             if(staffPage.classList.contains('active') && view_rooms.style.display === 'grid') {
                 selectFloor(selFloor); 
             }
 
-            // Admin Ekranı Güncelleme
             if(adminPage.classList.contains('active')) {
                 if(t_live.classList.contains('active')) refreshLiveLogs();
                 if(t_matrix.classList.contains('active')) refreshMatrix();
@@ -275,7 +276,7 @@ app.get('/', (req, res) => {
         }
 
         function processAndSubmit() {
-            let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]);
+            let items = Object.entries(counts).filter(e => e > 0).map(e => e + " x" + e);
             submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi");
         }
 
