@@ -16,7 +16,8 @@ const DB = {
     users: path.join(DATA_DIR, 'users.json'),
     products: path.join(DATA_DIR, 'products.json'),
     structure: path.join(DATA_DIR, 'structure.json'),
-    notes: path.join(DATA_DIR, 'notes.json')
+    notes: path.join(DATA_DIR, 'notes.json'),
+    stokLogs: path.join(DATA_DIR, 'stokLogs.json') // Yeni: Stok hareket geçmişi
 };
 
 app.use(bodyParser.json());
@@ -26,6 +27,7 @@ const readDB = (f) => {
     if (!fs.existsSync(f)) {
         if (f === DB.users) return [{ user: 'hakkı', pass: '2125', role: 'admin' }];
         if (f === DB.products) return [{ name: 'Su', stok: 100 }, { name: 'Kola', stok: 50 }];
+        if (f === DB.stokLogs) return [];
         if (f === DB.structure) return [];
         return f === DB.notes ? {} : [];
     }
@@ -48,7 +50,6 @@ app.post('/api/logs', (req, res) => {
     logs.unshift({ ...req.body, date: new Date().toLocaleDateString('tr-TR'), endTime: new Date().toLocaleTimeString('tr-TR') });
     writeDB(DB.logs, logs); 
     
-    // Stok Düşme İşlemi (Eğer ürün girilmişse)
     if (req.body.items && Array.isArray(req.body.items)) {
         let products = readDB(DB.products);
         req.body.items.forEach(item => {
@@ -64,6 +65,33 @@ app.post('/api/logs', (req, res) => {
     res.json({ success: true });
 });
 
+// Yeni: Stok Giriş Kaydı API
+app.post('/api/stok-giris', (req, res) => {
+    let products = readDB(DB.products);
+    let stokLogs = readDB(DB.stokLogs);
+    
+    const { productName, amount, source } = req.body;
+    let p = products.find(x => x.name === productName);
+    if(p) {
+        p.stok = (p.stok || 0) + parseInt(amount);
+        stokLogs.unshift({
+            productName,
+            amount,
+            source,
+            date: new Date().toLocaleDateString('tr-TR'),
+            time: new Date().toLocaleTimeString('tr-TR')
+        });
+        writeDB(DB.products, products);
+        writeDB(DB.stokLogs, stokLogs);
+        res.json({ success: true });
+    } else res.json({ success: false });
+});
+
+app.get('/api/stok-logs', (req, res) => res.json(readDB(DB.stokLogs)));
+app.get('/api/products', (req, res) => res.json(readDB(DB.products)));
+app.post('/api/products', (req, res) => { writeDB(DB.products, req.body); res.json({ success: true }); });
+app.get('/api/structure', (req, res) => res.json(readDB(DB.structure)));
+app.post('/api/structure', (req, res) => { writeDB(DB.structure, req.body); res.json({ success: true }); });
 app.get('/api/notes', (req, res) => res.json(readDB(DB.notes)));
 app.post('/api/notes', (req, res) => {
     const notes = readDB(DB.notes);
@@ -71,12 +99,6 @@ app.post('/api/notes', (req, res) => {
     writeDB(DB.notes, notes);
     res.json({ success: true });
 });
-
-app.get('/api/structure', (req, res) => res.json(readDB(DB.structure)));
-app.post('/api/structure', (req, res) => { writeDB(DB.structure, req.body); res.json({ success: true }); });
-app.get('/api/products', (req, res) => res.json(readDB(DB.products)));
-app.post('/api/products', (req, res) => { writeDB(DB.products, req.body); res.json({ success: true }); });
-
 app.get('/api/users', (req, res) => res.json(readDB(DB.users)));
 app.post('/api/users', (req, res) => {
     const u = readDB(DB.users); u.push({ ...req.body, role: 'staff' });
@@ -114,7 +136,7 @@ app.get('/', (req, res) => {
         .page { display: none; max-width: 1100px; margin: auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .active { display: block; }
         button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-p { background: var(--p); color: white; width: 100%; margin: 5px 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin: 15px 0; }
         .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; position: relative; overflow: hidden; }
@@ -131,12 +153,13 @@ app.get('/', (req, res) => {
         .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
         th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
         th { background: #34495e; color: white; }
         #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; }
         .modal-box { background:white; width:90%; max-width:400px; padding:20px; border-radius:15px; overflow-y: auto; max-height: 80vh; }
         .staff-note-box { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ffeeba; font-weight: bold; }
+        .stok-form { background: #f9f9f9; padding: 15px; border-radius: 10px; border: 1px solid #eee; margin-bottom: 20px; }
         .stok-kritik { color: var(--r); font-weight: bold; }
     </style>
 </head>
@@ -180,7 +203,7 @@ app.get('/', (req, res) => {
         <div class="admin-tabs">
             <button class="a-tab active" onclick="switchAdminTab('t_live', this)">👁️ Canlı</button>
             <button class="a-tab" onclick="switchAdminTab('t_matrix', this)">🏢 Harita</button>
-            <button class="a-tab" onclick="switchAdminTab('t_stok', this)">📦 Stok</button> <!-- Yeni Sekme -->
+            <button class="a-tab" onclick="switchAdminTab('t_stok', this)">📦 Stok Giriş</button>
             <button class="a-tab" onclick="switchAdminTab('t_setup', this)">⚙️ Ayarlar</button>
             <button class="a-tab" onclick="switchAdminTab('t_end', this)">🧹 Gün Sonu</button>
             <button onclick="logout()">Çıkış</button>
@@ -191,8 +214,21 @@ app.get('/', (req, res) => {
             <div id="matrixArea"></div>
         </div>
         <div id="t_stok" class="tab-content">
-            <h4>Depo Stok Durumu</h4>
-            <table><thead><tr><th>Ürün Adı</th><th>Mevcut Stok</th><th>İşlem</th></tr></thead><tbody id="stokBody"></tbody></table>
+            <div class="stok-form">
+                <h4>➕ Ürün Girişi Yap</h4>
+                <select id="stokProdSelect"></select>
+                <input id="stokAmount" type="number" placeholder="Adet">
+                <select id="stokSource">
+                    <option value="Ana Depo">Ana Depo</option>
+                    <option value="Satın Alma">Satın Alma</option>
+                    <option value="Diğer">Diğer</option>
+                </select>
+                <button class="btn-p" style="background:var(--g)" onclick="submitStokGiris()">Stoğa İlave Et</button>
+            </div>
+            <h4>Güncel Stok Listesi</h4>
+            <table><thead><tr><th>Ürün</th><th>Mevcut Stok</th></tr></thead><tbody id="stokListBody"></tbody></table>
+            <h4 style="margin-top:20px;">📜 Son Stok Hareketleri</h4>
+            <table><thead><tr><th>Ürün</th><th>Adet</th><th>Kaynak</th><th>Tarih/Saat</th></tr></thead><tbody id="stokHistoryBody"></tbody></table>
         </div>
         <div id="t_setup" class="tab-content">
             <h4>Personel</h4><div id="uList"></div><input id="inUN" placeholder="Ad"><input id="inUP" placeholder="Şifre"><button class="btn-p" onclick="addStaff()">Ekle</button>
@@ -227,7 +263,7 @@ app.get('/', (req, res) => {
             if(adminPage.classList.contains('active')) {
                 if(t_live.classList.contains('active')) refreshLiveLogs();
                 if(t_matrix.classList.contains('active')) refreshMatrix();
-                if(t_stok.classList.contains('active')) refreshStok();
+                if(t_stok.classList.contains('active')) refreshStokTab();
             }
         }
 
@@ -288,16 +324,24 @@ app.get('/', (req, res) => {
             products = p; hotelData = s; logs = l; notes = n;
             uList.innerHTML = u.filter(x => x.role !== 'admin').map(x => '<div>'+x.user+' <button onclick="delUser(\\''+x.user+'\\')">Sil</button></div>').join('');
             pList.innerHTML = products.map(x => x.name + " (" + (x.stok||0) + ")").join(', ');
-            refreshLiveLogs();
+            refreshStokTab();
         }
 
-        function refreshStok() {
-            stokBody.innerHTML = products.map(p => \`<tr><td>\${p.name}</td><td class="\${p.stok < 10 ? 'stok-kritik' : ''}">\${p.stok || 0}</td><td><button onclick="updateStok('\${p.name}', 10)">+10 Ekle</button> <button onclick="updateStok('\${p.name}', -10)">-10 Çıkar</button></td></tr>\`).join('');
+        async function refreshStokTab() {
+            stokProdSelect.innerHTML = products.map(p => \`<option value="\${p.name}">\${p.name}</option>\`).join('');
+            stokListBody.innerHTML = products.map(p => \`<tr><td>\${p.name}</td><td class="\${p.stok < 10 ? 'stok-kritik' : ''}">\${p.stok || 0}</td></tr>\`).join('');
+            
+            const sh = await fetch('/api/stok-logs').then(r=>r.json());
+            stokHistoryBody.innerHTML = sh.map(h => \`<tr><td>\${h.productName}</td><td>+\${h.amount}</td><td>\${h.source}</td><td>\${h.date} \${h.time}</td></tr>\`).join('');
         }
 
-        async function updateStok(name, amt) {
-            let p = products.find(x => x.name === name);
-            if(p) { p.stok = (p.stok || 0) + amt; await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(products) }); autoUpdate(); }
+        async function submitStokGiris() {
+            const body = { productName: stokProdSelect.value, amount: stokAmount.value, source: stokSource.value };
+            if(!body.amount || body.amount <= 0) return alert("Adet giriniz!");
+            await fetch('/api/stok-giris', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+            stokAmount.value = "";
+            autoUpdate();
+            alert("Stok başarıyla güncellendi.");
         }
 
         function refreshMatrix() {
@@ -338,7 +382,7 @@ app.get('/', (req, res) => {
             document.querySelectorAll('.a-tab').forEach(b => b.classList.remove('active'));
             document.getElementById(id).classList.add('active'); btn.classList.add('active');
             if(id === 't_matrix') refreshMatrix();
-            if(id === 't_stok') refreshStok();
+            if(id === 't_stok') refreshStokTab();
         }
 
         function toggleNoteMode() {
@@ -367,4 +411,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Stok Takibi Aktif: http://localhost:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Stok Yönetimi Aktif: http://localhost:${PORT}`));
