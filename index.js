@@ -94,7 +94,7 @@ app.post('/api/stok-islem', (req, res) => {
 
         stokLogs.unshift({
             productName,
-            amount: type === 'giris' ? `+${islemMiktari}` : `-${islemMiktari}`,
+            amount: type === 'giris' ? '+' + islemMiktari : '-' + islemMiktari,
             source,
             date: new Date().toLocaleDateString('tr-TR'),
             time: new Date().toLocaleTimeString('tr-TR')
