@@ -23,7 +23,6 @@ const readDB = (f) => {
     if (!fs.existsSync(f)) {
         if (f === DB.users) return [{ user: 'hakkı', pass: '2125', role: 'admin' }];
         if (f === DB.products) return [{ name: 'Su' }, { name: 'Kola' }];
-        if (f === DB.structure) return [];
         return [];
     }
     return JSON.parse(fs.readFileSync(f));
@@ -31,7 +30,6 @@ const readDB = (f) => {
 
 const writeDB = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
-// API Endpoints
 app.post('/api/login', (req, res) => {
     const users = readDB(DB.users);
     const u = users.find(u => u.user === req.body.user && u.pass === req.body.pass);
@@ -42,8 +40,14 @@ app.post('/api/login', (req, res) => {
 app.get('/api/logs', (req, res) => res.json(readDB(DB.logs)));
 app.post('/api/logs', (req, res) => {
     const logs = readDB(DB.logs);
-    logs.unshift({ ...req.body, date: new Date().toLocaleDateString('tr-TR'), endTime: new Date().toLocaleTimeString('tr-TR') });
-    writeDB(DB.logs, logs); res.json({ success: true });
+    // Aynı odanın mükerrer kaydı yerine en üste yeni kayıt ekler
+    logs.unshift({ 
+        ...req.body, 
+        date: new Date().toLocaleDateString('tr-TR'), 
+        endTime: new Date().toLocaleTimeString('tr-TR') 
+    });
+    writeDB(DB.logs, logs); 
+    res.json({ success: true });
 });
 
 app.get('/api/export', (req, res) => {
@@ -79,7 +83,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Minibar v16.8</title>
+    <title>Smart Minibar v16.9</title>
     <style>
         :root { --p: #2c3e50; --g: #2ecc71; --y: #f1c40f; --r: #e74c3c; --b: #3498db; --gr: #95a5a6; }
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
@@ -138,14 +142,14 @@ app.get('/', (req, res) => {
 
     <div id="adminPage" class="page">
         <div class="admin-tabs">
-            <button class="a-tab active" onclick="switchAdminTab('t_live', this)">👁️ Canlı</button>
+            <button class="a-tab active" onclick="switchAdminTab('t_live', this)">👁️ Canlı Takip</button>
             <button class="a-tab" onclick="switchAdminTab('t_setup', this)">⚙️ Yapılandır</button>
             <button class="a-tab" onclick="switchAdminTab('t_end', this)">🧹 Gün Sonu</button>
             <button onclick="logout()" style="background:#ddd">Çıkış</button>
         </div>
 
         <div id="t_live" class="tab-content active">
-            <div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Pers.</th><th>Durum</th><th>Harcamalar</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div>
+            <div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Personel</th><th>Durum</th><th>Harcamalar</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div>
         </div>
 
         <div id="t_setup" class="tab-content">
@@ -158,9 +162,9 @@ app.get('/', (req, res) => {
             </div>
             <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px">
                 <h4 style="margin:0 0 10px 0">Otel Yapısı Ekle</h4>
-                <input type="text" id="inB" placeholder="Blok (Örn: A)">
-                <input type="text" id="inF" placeholder="Kat (Örn: 1)">
-                <input type="text" id="inR" placeholder="Odalar (Örn: 101,102,103)">
+                <input type="text" id="inB" placeholder="Blok">
+                <input type="text" id="inF" placeholder="Kat">
+                <input type="text" id="inR" placeholder="Odalar (101,102)">
                 <button class="btn-p" onclick="addStruct()">YAPIYI KAYDET</button>
             </div>
             <div style="background:#f9f9f9; padding:10px; border-radius:8px;">
@@ -179,6 +183,7 @@ app.get('/', (req, res) => {
 
     <script>
         let currentUser = null, hotelData = [], products = [], logs = [], counts = {}, selRoom = "", selBlock = "", selFloor = "";
+        let adminRefreshInterval = null;
 
         window.onload = () => {
             const savedUser = localStorage.getItem('minibar_user');
@@ -193,18 +198,35 @@ app.get('/', (req, res) => {
             else alert("Hata!");
         }
 
-        function logout() { localStorage.removeItem('minibar_user'); location.reload(); }
+        function logout() { 
+            localStorage.removeItem('minibar_user'); 
+            if(adminRefreshInterval) clearInterval(adminRefreshInterval);
+            location.reload(); 
+        }
 
         function launchApp() {
             document.getElementById('loginPage').classList.remove('active');
-            if(currentUser.role === 'admin') { document.getElementById('adminPage').classList.add('active'); initAdmin(); }
-            else { document.getElementById('staffPage').classList.add('active'); document.getElementById('sn').innerText = "Personel: " + currentUser.user; initStaff(); }
+            if(currentUser.role === 'admin') { 
+                document.getElementById('adminPage').classList.add('active'); 
+                initAdmin();
+                // Admin paneli için her 10 saniyede bir otomatik yenileme
+                adminRefreshInterval = setInterval(refreshLiveLogs, 10000);
+            }
+            else { 
+                document.getElementById('staffPage').classList.add('active'); 
+                document.getElementById('sn').innerText = "Personel: " + currentUser.user; 
+                initStaff(); 
+            }
         }
 
+        // --- PERSONEL ---
         async function initStaff() {
-            hotelData = await (await fetch('/api/structure')).json();
-            products = await (await fetch('/api/products')).json();
-            logs = await (await fetch('/api/logs')).json();
+            const [s, p, l] = await Promise.all([
+                fetch('/api/structure').then(r => r.json()),
+                fetch('/api/products').then(r => r.json()),
+                fetch('/api/logs').then(r => r.json())
+            ]);
+            hotelData = s; products = p; logs = l;
             renderBlocks();
         }
 
@@ -252,10 +274,19 @@ app.get('/', (req, res) => {
         }
 
         async function submitLog(status, details) {
-            await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) });
+            await fetch('/api/logs', { 
+                method:'POST', 
+                headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) 
+            });
             alert("Kaydedildi");
-            initStaff();
-            setTimeout(() => selectFloor(selFloor), 100); 
+            // Veriyi tazele ve listeye dön
+            const resLogs = await fetch('/api/logs');
+            logs = await resLogs.json();
+            document.getElementById('statusScreen').style.display='none';
+            document.getElementById('productMenu').style.display='none';
+            document.getElementById('staffContent').style.display='block';
+            selectFloor(selFloor);
         }
 
         function processAndSubmit() {
@@ -263,23 +294,30 @@ app.get('/', (req, res) => {
             submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi");
         }
 
-        // ADMIN
+        // --- ADMIN ---
         async function initAdmin() {
-            logs = await (await fetch('/api/logs')).json();
-            products = await (await fetch('/api/products')).json();
-            hotelData = await (await fetch('/api/structure')).json();
-            const users = await (await fetch('/api/users')).json();
-            
-            document.getElementById('liveBody').innerHTML = logs.map(l => '<tr><td>'+l.room+'</td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join('');
+            await refreshLiveLogs();
+            const [p, s, u] = await Promise.all([
+                fetch('/api/products').then(r => r.json()),
+                fetch('/api/structure').then(r => r.json()),
+                fetch('/api/users').then(r => r.json())
+            ]);
+            products = p; hotelData = s;
             document.getElementById('pList').innerHTML = products.map(p => '<div class="sub-item">'+p.name+'</div>').join('');
-            document.getElementById('uList').innerHTML = users.filter(u => u.role !== 'admin').map(u => '<div class="sub-item">'+u.user+' <button class="delete-btn" onclick="delUser(\\''+u.user+'\\')">SİL</button></div>').join('');
+            document.getElementById('uList').innerHTML = u.filter(u => u.role !== 'admin').map(u => '<div class="sub-item">'+u.user+' <button class="delete-btn" onclick="delUser(\\''+u.user+'\\')">SİL</button></div>').join('');
+        }
+
+        async function refreshLiveLogs() {
+            const res = await fetch('/api/logs');
+            const latestLogs = await res.json();
+            document.getElementById('liveBody').innerHTML = latestLogs.map(l => '<tr><td>'+l.room+'</td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join('');
         }
 
         function switchAdminTab(id, btn) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.a-tab').forEach(b => b.classList.remove('active'));
             document.getElementById(id).classList.add('active'); btn.classList.add('active');
-            initAdmin();
+            if(id === 't_live') refreshLiveLogs();
         }
 
         async function addStaff() {
@@ -310,7 +348,7 @@ app.get('/', (req, res) => {
         }
 
         async function endDay() {
-            if(confirm("Tüm veriler temizlenecek?")) { await fetch('/api/end-day', { method:'POST' }); initAdmin(); }
+            if(confirm("Tüm veriler temizlenecek?")) { await fetch('/api/end-day', { method:'POST' }); refreshLiveLogs(); }
         }
     </script>
 </body>
@@ -318,4 +356,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v16.8 Aktif: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v16.9 Anlık Takip Aktif: ${PORT}`));
