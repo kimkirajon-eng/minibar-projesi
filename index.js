@@ -7,6 +7,7 @@ const XLSX = require('xlsx');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Veri Klasörü ve Dosya Yolları
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
@@ -20,18 +21,20 @@ const DB = {
 
 app.use(bodyParser.json());
 
+// Veritabanı Yardımcı Fonksiyonları
 const readDB = (f) => {
     if (!fs.existsSync(f)) {
         if (f === DB.users) return [{ user: 'hakkı', pass: '2125', role: 'admin' }];
         if (f === DB.products) return [{ name: 'Su' }, { name: 'Kola' }];
-        return [];
+        if (f === DB.structure) return [];
+        return f === DB.notes ? {} : [];
     }
-    try { return JSON.parse(fs.readFileSync(f)); } catch (e) { return []; }
+    try { return JSON.parse(fs.readFileSync(f)); } catch (e) { return f === DB.notes ? {} : []; }
 };
 
 const writeDB = (f, d) => fs.writeFileSync(f, JSON.stringify(d, null, 2));
 
-// API ENDPOINTS
+// --- API ENDPOINTS ---
 app.post('/api/login', (req, res) => {
     const users = readDB(DB.users);
     const u = users.find(u => u.user === req.body.user && u.pass === req.body.pass);
@@ -44,7 +47,6 @@ app.post('/api/logs', (req, res) => {
     const logs = readDB(DB.logs);
     logs.unshift({ ...req.body, date: new Date().toLocaleDateString('tr-TR'), endTime: new Date().toLocaleTimeString('tr-TR') });
     writeDB(DB.logs, logs); 
-    // Oda tamamlandığında notu sil (Opsiyonel: İstersen kalabilir)
     let notes = readDB(DB.notes);
     delete notes[req.body.room];
     writeDB(DB.notes, notes);
@@ -62,7 +64,10 @@ app.post('/api/notes', (req, res) => {
 app.get('/api/structure', (req, res) => res.json(readDB(DB.structure)));
 app.post('/api/structure', (req, res) => { writeDB(DB.structure, req.body); res.json({ success: true }); });
 app.get('/api/products', (req, res) => res.json(readDB(DB.products)));
-app.post('/api/products', (req, res) => { writeDB(DB.products, req.body); res.json({ success: true }); });
+app.post('/api/products', (req, res) => { 
+    const p = readDB(DB.products); p.push(req.body);
+    writeDB(DB.products, p); res.json({ success: true }); 
+});
 app.get('/api/users', (req, res) => res.json(readDB(DB.users)));
 app.post('/api/users', (req, res) => {
     const u = readDB(DB.users); u.push({ ...req.body, role: 'staff' });
@@ -74,7 +79,6 @@ app.delete('/api/users/:name', (req, res) => {
 });
 app.post('/api/end-day', (req, res) => { writeDB(DB.logs, []); writeDB(DB.notes, {}); res.json({ success: true }); });
 
-// EXCEL EXPORT
 app.get('/api/export', (req, res) => {
     const logs = readDB(DB.logs);
     const ws = XLSX.utils.json_to_sheet(logs);
@@ -86,7 +90,7 @@ app.get('/api/export', (req, res) => {
     res.send(buf);
 });
 
-// HTML
+// --- FRONTEND ---
 app.get('/', (req, res) => {
     res.send(`
 <!DOCTYPE html>
@@ -105,19 +109,14 @@ app.get('/', (req, res) => {
         .btn-p { background: var(--p); color: white; width: 100%; margin: 5px 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; margin: 15px 0; }
         .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; position: relative; }
-        
-        /* Not İşareti */
         .has-note::after { content: "💬"; position: absolute; top: -5px; right: -2px; font-size: 14px; z-index: 10; }
         .note-bg { background-color: #fce4ec !important; border: 2px solid var(--note) !important; }
-
         .status-Müsait { background-color: var(--g) !important; color: white !important; }
         .status-Sonra { background-color: var(--y) !important; color: black !important; }
         .status-DND { background-color: var(--r) !important; color: white !important; }
-        
         .history-container { position: absolute; left: 0; top: 0; bottom: 0; display: flex; flex-direction: row; gap: 1px; padding: 2px; }
         .h-bar { width: 3px; height: 100%; border-radius: 1px; }
         .h-Müsait { background: var(--g); } .h-Sonra { background: var(--y); } .h-DND { background: var(--r); }
-
         .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; overflow-x: auto; }
         .a-tab { flex: 1; padding: 10px; font-size: 11px; white-space: nowrap; background: none; }
         .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -127,7 +126,7 @@ app.get('/', (req, res) => {
         th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
         th { background: #34495e; color: white; }
         #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; }
-        .modal-box { background:white; width:90%; max-width:400px; padding:20px; border-radius:15px; }
+        .modal-box { background:white; width:90%; max-width:400px; padding:20px; border-radius:15px; overflow-y: auto; max-height: 80vh; }
         .staff-note-box { background: #fff3cd; color: #856404; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ffeeba; font-weight: bold; }
     </style>
 </head>
@@ -182,7 +181,7 @@ app.get('/', (req, res) => {
         </div>
         <div id="t_setup" class="tab-content">
             <h4>Personel</h4><div id="uList"></div><input id="inUN" placeholder="Ad"><input id="inUP" placeholder="Şifre"><button class="btn-p" onclick="addStaff()">Ekle</button>
-            <h4>Yapı</h4><input id="inB" placeholder="Blok"><input id="inF" placeholder="Kat"><input id="inR" placeholder="Odalar (101,102)"><button class="btn-p" onclick="addStruct()">Kaydet</button>
+            <h4>Yapı</h4><input id="inB" placeholder="Blok (Örn: A Blok)"><input id="inF" placeholder="Kat (Örn: 1)"><input id="inR" placeholder="Odalar (Örn: 101,102)"><button class="btn-p" onclick="addStruct()">Kaydet</button>
             <h4>Ürün</h4><div id="pList"></div><input id="inP" placeholder="Ürün Adı"><button class="btn-p" onclick="addProd()">Ekle</button>
         </div>
         <div id="t_end" class="tab-content" style="text-align:center"><button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g)">EXCEL İNDİR</button><button class="btn-p" onclick="endDay()" style="background:var(--r)">SIFIRLA</button></div>
@@ -201,15 +200,33 @@ app.get('/', (req, res) => {
 
         function launchApp() {
             loginPage.classList.remove('active');
-            if(currentUser.role === 'admin') { adminPage.classList.add('active'); initAdmin(); setInterval(autoUpdate, 5000); }
-            else { staffPage.classList.add('active'); sn.innerText = "P: " + currentUser.user; initStaff(); }
+            setInterval(autoUpdate, 5000); // OTOMATİK GÜNCELLEME BURADA BAŞLIYOR (HER 5 SN)
+
+            if(currentUser.role === 'admin') { 
+                adminPage.classList.add('active'); 
+                initAdmin(); 
+            }
+            else { 
+                staffPage.classList.add('active'); 
+                sn.innerText = "P: " + currentUser.user; 
+                initStaff(); 
+            }
         }
 
         async function autoUpdate() {
             const [l, n] = await Promise.all([fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json())]);
             logs = l; notes = n;
-            if(t_live.classList.contains('active')) refreshLiveLogs();
-            if(t_matrix.classList.contains('active')) refreshMatrix();
+            
+            // Personel Ekranı Güncelleme (Not anında düşsün diye)
+            if(staffPage.classList.contains('active') && view_rooms.style.display === 'grid') {
+                selectFloor(selFloor); 
+            }
+
+            // Admin Ekranı Güncelleme
+            if(adminPage.classList.contains('active')) {
+                if(t_live.classList.contains('active')) refreshLiveLogs();
+                if(t_matrix.classList.contains('active')) refreshMatrix();
+            }
         }
 
         async function initStaff() {
@@ -249,12 +266,12 @@ app.get('/', (req, res) => {
 
         function openProductMenu() {
             statusScreen.style.display='none'; productMenu.style.display='block'; counts = {}; products.forEach(p => counts[p.name] = 0);
-            pGrid.innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd;padding:5px;text-align:center;border-radius:8px" onclick="counts[\\''+p.name+'\\']++;c'+i+'.innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><b id="c'+i+'" style="color:var(--b);font-size:20px">0</b></div>').join('');
+            pGrid.innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd;padding:5px;text-align:center;border-radius:8px" onclick="counts[\\''+p.name+'\\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><b id="c'+i+'" style="color:var(--b);font-size:20px">0</b></div>').join('');
         }
 
         async function submitLog(status, details) {
             await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) });
-            delete notes[selRoom]; goBackToRooms();
+            goBackToRooms();
         }
 
         function processAndSubmit() {
@@ -262,19 +279,13 @@ app.get('/', (req, res) => {
             submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi");
         }
 
-        // ADMIN FUNCTIONS
+        // --- ADMIN FUNCTIONS ---
         async function initAdmin() {
             const [p, s, u, l, n] = await Promise.all([fetch('/api/products').then(r=>r.json()), fetch('/api/structure').then(r=>r.json()), fetch('/api/users').then(r=>r.json()), fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json())]);
             products = p; hotelData = s; logs = l; notes = n;
             uList.innerHTML = u.filter(x => x.role !== 'admin').map(x => '<div>'+x.user+' <button onclick="delUser(\\''+x.user+'\\')">Sil</button></div>').join('');
             pList.innerHTML = products.map(x => x.name).join(', ');
             refreshLiveLogs();
-        }
-
-        function toggleNoteMode() {
-            noteMode = !noteMode;
-            noteModeBtn.innerText = noteMode ? "📝 NOT EKLEME MODU: AÇIK (Odaya Tıkla)" : "📝 NOT EKLEME MODU: KAPALI";
-            noteModeBtn.style.background = noteMode ? "var(--r)" : "var(--note)";
         }
 
         function refreshMatrix() {
@@ -319,7 +330,13 @@ app.get('/', (req, res) => {
             if(id === 't_matrix') refreshMatrix();
         }
 
-        async function addStaff() { await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:inUN.value, pass:inUP.value}) }); initAdmin(); }
+        function toggleNoteMode() {
+            noteMode = !noteMode;
+            noteModeBtn.innerText = noteMode ? "📝 NOT EKLEME MODU: AÇIK (Odaya Tıkla)" : "📝 NOT EKLEME MODU: KAPALI";
+            noteModeBtn.style.background = noteMode ? "var(--r)" : "var(--note)";
+        }
+
+        async function addStaff() { await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:inUN.value, pass:inUP.value}) }); initAdmin(); inUN.value=''; inUP.value=''; }
         async function delUser(n) { if(confirm('Sil?')) { await fetch('/api/users/'+n, { method:'DELETE' }); initAdmin(); } }
         async function addStruct() {
             let s = hotelData; let b = s.find(x => x.name === inB.value);
@@ -327,7 +344,7 @@ app.get('/', (req, res) => {
             b.floors.push({name: inF.value, rooms: inR.value.split(',').map(x => x.trim())});
             await fetch('/api/structure', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(s) }); initAdmin();
         }
-        async function addProd() { await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:inP.value}) }); initAdmin(); }
+        async function addProd() { await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name:inP.value}) }); initAdmin(); inP.value=''; }
         async function endDay() { if(confirm("Sıfırla?")) { await fetch('/api/end-day', { method:'POST' }); location.reload(); } }
         function refreshLiveLogs() { liveBody.innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join(''); }
     </script>
@@ -336,4 +353,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Not Sistemi Aktif: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.4 Not Sistemi Aktif: http://localhost:${PORT}`));
