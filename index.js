@@ -49,13 +49,10 @@ app.post('/api/logs', (req, res) => {
 
 app.get('/api/notes', (req, res) => res.json(readDB(DB.notes)));
 app.post('/api/notes', (req, res) => { writeDB(DB.notes, req.body); res.json({ success: true }); });
-
 app.get('/api/structure', (req, res) => res.json(readDB(DB.structure)));
 app.post('/api/structure', (req, res) => { writeDB(DB.structure, req.body); res.json({ success: true }); });
-
 app.get('/api/products', (req, res) => res.json(readDB(DB.products)));
 app.post('/api/products', (req, res) => { writeDB(DB.products, req.body); res.json({ success: true }); });
-
 app.get('/api/users', (req, res) => res.json(readDB(DB.users)));
 app.post('/api/users', (req, res) => {
     const u = readDB(DB.users); u.push({ ...req.body, role: 'staff' });
@@ -65,7 +62,6 @@ app.delete('/api/users/:name', (req, res) => {
     let u = readDB(DB.users).filter(x => x.user !== req.params.name);
     writeDB(DB.users, u); res.json({ success: true });
 });
-
 app.post('/api/end-day', (req, res) => { writeDB(DB.logs, []); writeDB(DB.notes, {}); res.json({ success: true }); });
 
 app.get('/api/export', (req, res) => {
@@ -87,12 +83,12 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Minibar v17.6</title>
+    <title>Smart Minibar v17.7</title>
     <style>
         :root { --p: #2c3e50; --g: #2ecc71; --y: #f1c40f; --r: #e74c3c; --b: #3498db; --gr: #95a5a6; --note: #9b59b6; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
+        body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
         .page { display: none; max-width: 1100px; margin: auto; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .active { display: block; }
+        .active { display: block !important; }
         button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         input { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .btn-p { background: var(--p); color: white; width: 100%; margin: 5px 0; }
@@ -106,18 +102,14 @@ app.get('/', (req, res) => {
         .note-badge { position: absolute; top: 2px; right: 2px; font-size: 10px; }
 
         .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; }
-        .a-tab { flex: 1; padding: 10px; font-size: 11px; background: none; color: #666; }
-        .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .a-tab { flex: 1; padding: 10px; font-size: 11px; background: none; color: #666; border: none; cursor: pointer; }
+        .a-tab.active { background: white !important; color: var(--p) !important; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 6px; }
         .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .tab-content.active { display: block !important; }
         
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
         th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
-        th { background: #f8f9fa; }
-        
-        .setup-box { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eef0f2; }
-        .item-list { margin-top: 10px; max-height: 150px; overflow-y: auto; background: white; border-radius: 5px; border: 1px solid #eee; }
-        .list-row { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
+        .setup-box { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
         #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.75); z-index:9999; align-items:center; justify-content:center; }
         .modal-box { background:white; width:90%; max-width:400px; padding:20px; border-radius:15px; }
     </style>
@@ -127,16 +119,18 @@ app.get('/', (req, res) => {
         <div class="modal-box"><h3 id="mTitle"></h3><div id="mBody"></div><button class="btn-p" onclick="document.getElementById('modal').style.display='none'">Kapat</button></div>
     </div>
 
+    <!-- GİRİŞ SAYFASI -->
     <div id="loginPage" class="page active">
-        <h2 style="text-align:center; color:var(--p)">Smart Minibar</h2>
+        <h2 style="text-align:center">Smart Minibar</h2>
         <input type="text" id="lUser" placeholder="Kullanıcı Adı">
         <input type="password" id="lPass" placeholder="Şifre">
         <button class="btn-p" onclick="login()">GİRİŞ YAP</button>
     </div>
 
+    <!-- PERSONEL SAYFASI -->
     <div id="staffPage" class="page">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-            <b id="sn"></b> <button onclick="logout()" style="background:#eee; padding:5px 10px">Çıkış</button>
+            <b id="sn"></b> <button onclick="logout()">Çıkış</button>
         </div>
         <div id="staffContent">
             <div id="blockTabs" class="grid"></div>
@@ -144,31 +138,32 @@ app.get('/', (req, res) => {
             <div id="view_rooms" class="grid" style="display:none"></div>
         </div>
         <div id="statusScreen" style="display:none">
-            <div id="staffNoteBox" style="background:#f3e5f5; padding:10px; border-radius:8px; margin-bottom:10px; display:none; border-left:5px solid var(--note); font-size:14px"></div>
-            <h2 id="targetRoomTitle" style="text-align:center; margin:10px 0"></h2>
-            <button class="btn-p" style="background:var(--g); height:80px; font-size:18px" onclick="openProductMenu()">MÜSAİT / GİRİLDİ</button>
-            <button class="btn-p" style="background:var(--y); color:#000; height:70px" onclick="submitLog('Sonra', '-')">SONRA BAKILACAK</button>
-            <button class="btn-p" style="background:var(--r); height:70px" onclick="submitLog('DND', '-')">DND / GİRİLEMEZ</button>
-            <button class="btn-p" style="background:var(--gr); margin-top:15px" onclick="goBackToRooms()">⬅ GERİ</button>
+            <div id="staffNoteBox" style="background:#f3e5f5; padding:10px; border-radius:8px; margin-bottom:10px; display:none; border-left:5px solid var(--note)"></div>
+            <h2 id="targetRoomTitle" style="text-align:center"></h2>
+            <button class="btn-p" style="background:var(--g); height:80px" onclick="openProductMenu()">MÜSAİT</button>
+            <button class="btn-p" style="background:var(--y); color:#000; height:70px" onclick="submitLog('Sonra', '-')">SONRA</button>
+            <button class="btn-p" style="background:var(--r); height:70px" onclick="submitLog('DND', '-')">DND</button>
+            <button class="btn-p" onclick="goBackToRooms()">⬅ GERİ</button>
         </div>
         <div id="productMenu" style="display:none">
-            <h3 style="text-align:center">Harcamalar</h3>
             <div id="pGrid" class="grid"></div>
-            <button class="btn-p" style="background:var(--g); height:80px; font-size:20px" onclick="processAndSubmit()">KAYDI TAMAMLA</button>
-            <button class="btn-p" style="background:var(--gr); margin-top:10px" onclick="openStatusMenu(selRoom)">⬅ GERİ</button>
+            <button class="btn-p" style="background:var(--g); height:80px" onclick="processAndSubmit()">KAYDET</button>
         </div>
     </div>
 
+    <!-- YÖNETİCİ SAYFASI -->
     <div id="adminPage" class="page">
         <div class="admin-tabs">
             <button class="a-tab active" onclick="switchAdminTab('t_live', this)">👁️ Canlı</button>
             <button class="a-tab" onclick="switchAdminTab('t_matrix', this)">🏢 Harita</button>
             <button class="a-tab" onclick="switchAdminTab('t_setup', this)">⚙️ Ayar</button>
             <button class="a-tab" onclick="switchAdminTab('t_end', this)">🧹 Gün Sonu</button>
-            <button onclick="logout()" style="background:#ddd; font-size:10px">Çıkış</button>
+            <button onclick="logout()" style="background:#ddd; border-radius:5px; padding:5px">X</button>
         </div>
 
-        <div id="t_live" class="tab-content active"><div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Personel</th><th>Durum</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div></div>
+        <div id="t_live" class="tab-content active">
+            <table><thead><tr><th>Oda</th><th>Durum</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table>
+        </div>
         
         <div id="t_matrix" class="tab-content">
             <button id="btnNoteMode" class="btn-p" onclick="toggleNoteMode()" style="background:var(--note)">📝 NOT MODU: KAPALI</button>
@@ -177,109 +172,131 @@ app.get('/', (req, res) => {
 
         <div id="t_setup" class="tab-content">
             <div class="setup-box">
-                <b>Personel Yönetimi</b>
-                <input type="text" id="inUN" placeholder="Personel Adı">
-                <input type="password" id="inUP" placeholder="Şifre">
-                <button class="btn-p" onclick="addStaff()" style="background:var(--b)">Personel Ekle</button>
-                <div id="uList" class="item-list"></div>
+                <b>Personel Ekle</b>
+                <input type="text" id="inUN" placeholder="Ad"> <input type="password" id="inUP" placeholder="Şifre">
+                <button class="btn-p" onclick="addStaff()">Ekle</button>
+                <div id="uList"></div>
             </div>
             <div class="setup-box">
-                <b>Oda / Otel Yapısı</b>
-                <input type="text" id="inB" placeholder="Blok Adı (Örn: A)">
-                <input type="text" id="inF" placeholder="Kat No (Örn: 1)">
-                <input type="text" id="inR" placeholder="Odalar (Örn: 101,102,103)">
-                <button class="btn-p" onclick="addStruct()">Yapıyı Kaydet</button>
+                <b>Oda Yapısı</b>
+                <input type="text" id="inB" placeholder="Blok"> <input type="text" id="inF" placeholder="Kat"> <input type="text" id="inR" placeholder="Odalar (101,102)">
+                <button class="btn-p" onclick="addStruct()">Kaydet</button>
             </div>
             <div class="setup-box">
-                <b>Ürün Listesi</b>
+                <b>Ürün Ekle</b>
                 <input type="text" id="inP" placeholder="Ürün Adı">
-                <button class="btn-p" onclick="addProd()" style="background:var(--g)">Ürün Ekle</button>
-                <div id="pList" class="item-list"></div>
+                <button class="btn-p" onclick="addProd()">Ekle</button>
+                <div id="pList"></div>
             </div>
         </div>
 
         <div id="t_end" class="tab-content" style="text-align:center">
-            <button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g); height:60px">📥 EXCEL RAPORU AL</button>
-            <hr>
-            <p style="color:var(--r); font-size:12px">Gün sonu işlemi tüm kayıtları ve yönetici notlarını siler.</p>
-            <button class="btn-p" onclick="endDay()" style="background:var(--r)">🧹 GÜNÜ SIFIRLA</button>
+            <button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g)">📥 EXCEL RAPORU</button>
+            <button class="btn-p" onclick="endDay()" style="background:var(--r); margin-top:20px">🧹 GÜNÜ SIFIRLA</button>
         </div>
     </div>
 
     <script>
         let currentUser = null, hotelData = [], products = [], logs = [], roomNotes = {}, counts = {}, selRoom = "", selBlock = "", selFloor = "";
-        let isNoteMode = false, adminInterval = null;
-
-        window.onload = () => { const s = localStorage.getItem('minibar_user'); if(s) { currentUser = JSON.parse(s); launchApp(); } };
+        let isNoteMode = false;
 
         async function login() {
             const user = document.getElementById('lUser').value, pass = document.getElementById('lPass').value;
             const res = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user,pass}) });
             const data = await res.json();
-            if(data.success) { currentUser = data; localStorage.setItem('minibar_user', JSON.stringify(data)); launchApp(); } else alert("Giriş Hatalı!");
+            if(data.success) { currentUser = data; launchApp(); } else alert("Hata!");
         }
 
-        function logout() { localStorage.removeItem('minibar_user'); if(adminInterval) clearInterval(adminInterval); location.reload(); }
+        function logout() { location.reload(); }
 
         function launchApp() {
-            document.getElementById('loginPage').classList.remove('active');
-            if(currentUser.role === 'admin') { document.getElementById('adminPage').classList.add('active'); initAdmin(); adminInterval = setInterval(autoUpdate, 5000); }
-            else { document.getElementById('staffPage').classList.add('active'); document.getElementById('sn').innerText = "Personel: " + currentUser.user; initStaff(); }
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            if(currentUser.role === 'admin') { document.getElementById('adminPage').classList.add('active'); initAdmin(); }
+            else { document.getElementById('staffPage').classList.add('active'); document.getElementById('sn').innerText = currentUser.user; initStaff(); }
         }
 
-        async function autoUpdate() {
-            const [l, n] = await Promise.all([fetch('/api/logs').then(r=>r.json()), fetch('/api/notes').then(r=>r.json())]);
-            logs = l; roomNotes = n;
-            if(document.getElementById('t_live').classList.contains('active')) refreshLiveLogs();
-            if(document.getElementById('t_matrix').classList.contains('active')) refreshMatrix();
+        function switchAdminTab(tabId, btn) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.a-tab').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+            if(tabId === 't_matrix') refreshMatrix();
+            if(tabId === 't_live') refreshLiveLogs();
         }
 
-        async function initAdmin() {
-            const [s, p, u] = await Promise.all([
-                fetch('/api/structure').then(r=>r.json()),
-                fetch('/api/products').then(r=>r.json()),
-                fetch('/api/users').then(r=>r.json())
-            ]);
-            hotelData = s; products = p;
-            document.getElementById('uList').innerHTML = u.filter(x => x.role !== 'admin').map(x => \`<div class="list-row"><span>\${x.user}</span><button onclick="delUser('\${x.user}')" style="color:red; background:none; padding:0">Sil</button></div>\`).join('');
-            document.getElementById('pList').innerHTML = products.map(x => \`<div class="list-row"><span>\${x.name}</span></div>\`).join('');
-            autoUpdate();
-        }
-
-        async function initStaff() {
-            const [s, p, l, n] = await Promise.all([
+        // --- Ortak Veri Çekme ---
+        async function loadAllData() {
+            const [s, p, l, n, u] = await Promise.all([
                 fetch('/api/structure').then(r=>r.json()),
                 fetch('/api/products').then(r=>r.json()),
                 fetch('/api/logs').then(r=>r.json()),
-                fetch('/api/notes').then(r=>r.json())
+                fetch('/api/notes').then(r=>r.json()),
+                fetch('/api/users').then(r=>r.json())
             ]);
             hotelData = s; products = p; logs = l; roomNotes = n;
-            renderBlocks();
+            return {u};
         }
 
-        // --- STAFF NAV ---
+        // --- Admin İşlemleri ---
+        async function initAdmin() {
+            const data = await loadAllData();
+            document.getElementById('uList').innerHTML = data.u.filter(x=>x.role!=='admin').map(x=>\`<div>\${x.user} <button onclick="delUser('\${x.user}')" style="color:red;background:none">Sil</button></div>\`).join('');
+            document.getElementById('pList').innerHTML = products.map(x=>\`<div>\${x.name}</div>\`).join('');
+            refreshLiveLogs();
+        }
+
+        function refreshLiveLogs() { document.getElementById('liveBody').innerHTML = logs.map(l => \`<tr><td>\${l.room}</td><td>\${l.status}</td><td>\${l.endTime}</td></tr>\`).join(''); }
+
+        function refreshMatrix() {
+            let h = ""; hotelData.forEach(b => {
+                h += \`<h4>Blok \${b.name}</h4>\`; b.floors.forEach(f => {
+                    h += '<div class="grid">'; f.rooms.forEach(r => {
+                        const log = logs.find(l => String(l.room) === String(r));
+                        const note = roomNotes[r];
+                        h += \`<button class="btn-room \${log?'status-'+log.status:''} \${note?'has-note':''}" onclick="handleRoomClick('\${r}')">\${note?'<span class="note-badge">📝</span>':''}\${r}</button>\`;
+                    }); h += '</div>';
+                });
+            }); document.getElementById('matrixArea').innerHTML = h;
+        }
+
+        function handleRoomClick(r) {
+            if(isNoteMode) {
+                const n = prompt("Not:", roomNotes[r]||"");
+                if(n !== null) { if(n==="") delete roomNotes[r]; else roomNotes[r]=n; saveNotes(); }
+            } else {
+                const l = logs.filter(x => String(x.room) === String(r));
+                document.getElementById('mTitle').innerText = "Oda " + r;
+                document.getElementById('mBody').innerHTML = l.map(x=>\`<div>\${x.endTime} - \${x.status}</div>\`).join('') || "Kayıt yok.";
+                document.getElementById('modal').style.display='flex';
+            }
+        }
+
+        async function saveNotes() { await fetch('/api/notes', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(roomNotes) }); refreshMatrix(); }
+        function toggleNoteMode() { isNoteMode = !isNoteMode; document.getElementById('btnNoteMode').innerText = isNoteMode ? "NOT MODU: AÇIK" : "NOT MODU: KAPALI"; }
+
+        // --- Personel İşlemleri ---
+        async function initStaff() { await loadAllData(); renderBlocks(); }
         function renderBlocks() {
             document.getElementById('staffContent').style.display='block'; document.getElementById('statusScreen').style.display='none'; document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='none'; document.getElementById('blockTabs').style.display='grid';
-            document.getElementById('blockTabs').innerHTML = hotelData.map(b => \`<button class="btn-room" onclick="selectBlock('\${b.name}')">Blok \${b.name}</button>\`).join('');
+            document.getElementById('blockTabs').innerHTML = hotelData.map(b => \`<button class="btn-room" onclick="selectBlock('\${b.name}')">\${b.name}</button>\`).join('');
         }
         function selectBlock(n) {
             selBlock = n; const b = hotelData.find(x => x.name === n);
             document.getElementById('blockTabs').style.display='none'; document.getElementById('view_floors').style.display='grid';
-            document.getElementById('view_floors').innerHTML = b.floors.map(f => \`<button class="btn-room" style="background:var(--b); color:white" onclick="selectFloor('\${f.name}')">Kat \${f.name}</button>\`).join('') + '<button class="btn-p" onclick="renderBlocks()">⬅ GERİ</button>';
+            document.getElementById('view_floors').innerHTML = b.floors.map(f => \`<button class="btn-room" onclick="selectFloor('\${f.name}')">Kat \${f.name}</button>\`).join('') + '<button class="btn-p" onclick="renderBlocks()">Geri</button>';
         }
         function selectFloor(n) {
             selFloor = n; const f = hotelData.find(x => x.name === selBlock).floors.find(x => x.name === n);
-            document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='grid'; document.getElementById('statusScreen').style.display='none'; document.getElementById('staffContent').style.display='block';
+            document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='grid'; document.getElementById('staffContent').style.display='block';
             document.getElementById('view_rooms').innerHTML = f.rooms.map(r => {
                 const log = logs.find(l => String(l.room) === String(r));
-                const note = roomNotes[r];
-                return \`<button class="btn-room \${log?'status-'+log.status:''} \${note?'has-note':''}" onclick="openStatusMenu('\${r}')">\${note?'<span class="note-badge">📝</span>':''}\${r}</button>\`;
-            }).join('') + \`<button class="btn-p" onclick="selectBlock('\${selBlock}')">⬅ GERİ</button>\`;
+                return \`<button class="btn-room \${log?'status-'+log.status:''} \${roomNotes[r]?'has-note':''}" onclick="openStatusMenu('\${r}')">\${r}</button>\`;
+            }).join('') + \`<button class="btn-p" onclick="selectBlock('\${selBlock}')">Geri</button>\`;
         }
         function openStatusMenu(r) {
-            selRoom = r; document.getElementById('staffContent').style.display='none'; document.getElementById('statusScreen').style.display='block'; document.getElementById('targetRoomTitle').innerText="Oda "+r;
+            selRoom = r; document.getElementById('staffContent').style.display='none'; document.getElementById('statusScreen').style.display='block'; document.getElementById('targetRoomTitle').innerText=r;
             const nb = document.getElementById('staffNoteBox');
-            if(roomNotes[r]) { nb.innerText = "NOT: " + roomNotes[r]; nb.style.display='block'; } else nb.style.display='none';
+            if(roomNotes[r]) { nb.innerText = roomNotes[r]; nb.style.display='block'; } else nb.style.display='none';
         }
         function goBackToRooms() { selectFloor(selFloor); }
 
@@ -291,30 +308,13 @@ app.get('/', (req, res) => {
         function openProductMenu() {
             document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='block';
             counts = {}; products.forEach(p => counts[p.name] = 0);
-            document.getElementById('pGrid').innerHTML = products.map((p,i) => \`<div style="border:1px solid #ddd; padding:10px; text-align:center; border-radius:8px;" onclick="counts['\${p.name}']++; this.querySelector('b').innerText=counts['\${p.name}']">\${p.name}<br><b style="font-size:18px; color:var(--b)">0</b></div>\`).join('');
+            document.getElementById('pGrid').innerHTML = products.map((p,i) => \`<div style="border:1px solid #ddd; padding:10px;" onclick="counts['\${p.name}']++; this.querySelector('b').innerText=counts['\${p.name}']">\${p.name}<br><b>0</b></div>\`).join('');
         }
-        function processAndSubmit() { let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]); submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi"); }
+        function processAndSubmit() { let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]); submitLog('Müsait', items.join(", ")); }
 
-        // --- ADMIN FUNC ---
-        function toggleNoteMode() { isNoteMode = !isNoteMode; document.getElementById('btnNoteMode').innerText = "📝 NOT MODU: " + (isNoteMode ? "AÇIK" : "KAPALI"); document.getElementById('btnNoteMode').style.background = isNoteMode ? "var(--r)" : "var(--note)"; }
-        function refreshLiveLogs() { document.getElementById('liveBody').innerHTML = logs.slice(0,30).map(l => \`<tr><td>\${l.room}</td><td>\${l.staff}</td><td>\${l.status}</td><td>\${l.endTime}</td></tr>\`).join(''); }
-        function refreshMatrix() {
-            let h = ""; hotelData.forEach(b => {
-                h += \`<h4 style="margin:10px 0">Blok \${b.name}</h4>\`; b.floors.forEach(f => {
-                    h += \`<div class="grid">\`; f.rooms.forEach(r => {
-                        const log = logs.find(l => String(l.room) === String(r)); const note = roomNotes[r];
-                        h += \`<button class="btn-room \${log?'status-'+log.status:''} \${note?'has-note':''}" onclick="handleRoomClick('\${r}')">\${note?'<span class="note-badge">📝</span>':''}\${r}</button>\`;
-                    }); h += '</div>';
-                });
-            }); document.getElementById('matrixArea').innerHTML = h;
-        }
-        function handleRoomClick(r) {
-            if(isNoteMode) { const n = prompt("Not yazın (Silmek için boş bırakın):", roomNotes[r]||""); if(n !== null) { if(n==="") delete roomNotes[r]; else roomNotes[r]=n; saveNotes(); } }
-            else { const l = logs.filter(x => String(x.room) === String(r)); document.getElementById('mTitle').innerText = "Oda " + r; document.getElementById('mBody').innerHTML = (roomNotes[r] ? \`<p style="color:var(--note)"><b>Not: \${roomNotes[r]}</b></p><hr>\` : "") + l.map(x => \`<div>\${x.endTime} - \${x.status} (\${x.staff})</div>\`).join(''); document.getElementById('modal').style.display='flex'; }
-        }
-        async function saveNotes() { await fetch('/api/notes', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(roomNotes) }); refreshMatrix(); }
+        // --- Ayarlar ---
         async function addStaff() { await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:document.getElementById('inUN').value, pass:document.getElementById('inUP').value}) }); initAdmin(); }
-        async function delUser(n) { if(confirm('Silinsin mi?')) { await fetch('/api/users/'+n, { method:'DELETE' }); initAdmin(); } }
+        async function delUser(n) { await fetch('/api/users/'+n, { method:'DELETE' }); initAdmin(); }
         async function addProd() { await fetch('/api/products', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify([...products, {name:document.getElementById('inP').value}]) }); initAdmin(); }
         async function addStruct() {
             let bN = document.getElementById('inB').value, fN = document.getElementById('inF').value, rN = document.getElementById('inR').value;
@@ -322,11 +322,11 @@ app.get('/', (req, res) => {
             block.floors.push({name:fN, rooms:rN.split(',').map(x=>x.trim())});
             await fetch('/api/structure', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(hotelData) }); initAdmin();
         }
-        async function endDay() { if(confirm("DİKKAT: Veriler silinecek!")) { await fetch('/api/end-day', {method:'POST'}); initAdmin(); } }
+        async function endDay() { if(confirm("Sıfırla?")) { await fetch('/api/end-day', {method:'POST'}); initAdmin(); } }
     </script>
 </body>
 </html>
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.6 Tam Panel Aktif: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Smart Minibar v17.7 Aktif: ${PORT}`));
