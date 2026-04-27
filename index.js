@@ -40,7 +40,6 @@ app.post('/api/login', (req, res) => {
 app.get('/api/logs', (req, res) => res.json(readDB(DB.logs)));
 app.post('/api/logs', (req, res) => {
     const logs = readDB(DB.logs);
-    // Aynı odanın mükerrer kaydı yerine en üste yeni kayıt ekler
     logs.unshift({ 
         ...req.body, 
         date: new Date().toLocaleDateString('tr-TR'), 
@@ -83,7 +82,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Minibar v16.9</title>
+    <title>Smart Minibar v17.0</title>
     <style>
         :root { --p: #2c3e50; --g: #2ecc71; --y: #f1c40f; --r: #e74c3c; --b: #3498db; --gr: #95a5a6; }
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
@@ -94,16 +93,20 @@ app.get('/', (req, res) => {
         .btn-p { background: var(--p); color: white; width: 100%; margin: 5px 0; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 10px; margin: 15px 0; }
         .btn-room { background: #fff; border: 1px solid #ddd; height: 55px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; }
-        .room-done-Müsait { background: var(--g) !important; color: white; border:none; }
-        .room-done-Sonra { background: var(--y) !important; color: #000; border:none; }
-        .room-done-DND { background: var(--r) !important; color: white; border:none; }
+        
+        /* DURUM RENKLERİ */
+        .status-Müsait { background-color: var(--g) !important; color: white !important; }
+        .status-Sonra { background-color: var(--y) !important; color: black !important; }
+        .status-DND { background-color: var(--r) !important; color: white !important; }
+        
         .admin-tabs { display: flex; gap: 5px; margin-bottom: 15px; background: #eee; padding: 5px; border-radius: 8px; overflow-x: auto; }
         .a-tab { flex: 1; padding: 10px; font-size: 12px; white-space: nowrap; background: none; }
         .a-tab.active { background: white; color: var(--p); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
-        th, td { border: 1px solid #eee; padding: 8px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; background: white; }
+        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
+        th { background: #34495e; color: white; }
         .sub-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
         .delete-btn { background: var(--r); color: white; padding: 4px 8px; font-size: 10px; border-radius: 4px; }
     </style>
@@ -209,8 +212,7 @@ app.get('/', (req, res) => {
             if(currentUser.role === 'admin') { 
                 document.getElementById('adminPage').classList.add('active'); 
                 initAdmin();
-                // Admin paneli için her 10 saniyede bir otomatik yenileme
-                adminRefreshInterval = setInterval(refreshLiveLogs, 10000);
+                adminRefreshInterval = setInterval(refreshLiveLogs, 5000); // 5 saniyeye düşürüldü
             }
             else { 
                 document.getElementById('staffPage').classList.add('active'); 
@@ -255,7 +257,8 @@ app.get('/', (req, res) => {
             document.getElementById('view_rooms').style.display = 'grid';
             document.getElementById('view_rooms').innerHTML = f.rooms.map(r => {
                 const log = logs.find(l => String(l.room) === String(r));
-                return '<button class="btn-room '+(log?'room-done-'+log.status:'')+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>';
+                const statusCls = log ? 'status-' + log.status : '';
+                return '<button class="btn-room '+statusCls+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>';
             }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+selBlock+'\\')">⬅ GERİ</button>';
         }
 
@@ -280,7 +283,6 @@ app.get('/', (req, res) => {
                 body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) 
             });
             alert("Kaydedildi");
-            // Veriyi tazele ve listeye dön
             const resLogs = await fetch('/api/logs');
             logs = await resLogs.json();
             document.getElementById('statusScreen').style.display='none';
@@ -310,7 +312,10 @@ app.get('/', (req, res) => {
         async function refreshLiveLogs() {
             const res = await fetch('/api/logs');
             const latestLogs = await res.json();
-            document.getElementById('liveBody').innerHTML = latestLogs.map(l => '<tr><td>'+l.room+'</td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join('');
+            document.getElementById('liveBody').innerHTML = latestLogs.map(l => {
+                const rowClass = 'status-' + l.status; // DURUM SINIFI
+                return '<tr class="'+rowClass+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>';
+            }).join('');
         }
 
         function switchAdminTab(id, btn) {
@@ -356,4 +361,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v16.9 Anlık Takip Aktif: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.0 Renkli Takip Aktif: ${PORT}`));
