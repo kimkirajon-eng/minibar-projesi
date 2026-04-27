@@ -78,7 +78,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Smart Minibar v17.1</title>
+    <title>Smart Minibar v17.2</title>
     <style>
         :root { --p: #2c3e50; --g: #2ecc71; --y: #f1c40f; --r: #e74c3c; --b: #3498db; --gr: #95a5a6; }
         body { font-family: sans-serif; background: #f4f7f6; margin: 0; padding: 10px; }
@@ -90,7 +90,6 @@ app.get('/', (req, res) => {
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 8px; margin: 15px 0; }
         .btn-room { background: #fff; border: 1px solid #ddd; height: 50px; border-radius: 8px; display:flex; align-items:center; justify-content:center; cursor: pointer; font-weight: bold; font-size: 12px; }
         
-        /* RENKLER */
         .status-Müsait { background-color: var(--g) !important; color: white !important; border:none; }
         .status-Sonra { background-color: var(--y) !important; color: black !important; border:none; }
         .status-DND { background-color: var(--r) !important; color: white !important; border:none; }
@@ -103,22 +102,14 @@ app.get('/', (req, res) => {
         table { width: 100%; border-collapse: collapse; font-size: 11px; background: white; }
         th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
         th { background: #34495e; color: white; }
-        
-        /* MODAL */
         #modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; }
         .modal-box { background:white; width:90%; max-width:400px; padding:20px; border-radius:15px; position:relative; }
-        
         .sub-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 13px; }
     </style>
 </head>
 <body>
-    <!-- Oda Detay Modalı -->
     <div id="modal">
-        <div class="modal-box">
-            <h3 id="mTitle" style="margin-top:0"></h3>
-            <div id="mBody"></div>
-            <button class="btn-p" onclick="document.getElementById('modal').style.display='none'">Kapat</button>
-        </div>
+        <div class="modal-box"><h3 id="mTitle" style="margin-top:0"></h3><div id="mBody"></div><button class="btn-p" onclick="document.getElementById('modal').style.display='none'">Kapat</button></div>
     </div>
 
     <div id="loginPage" class="page active">
@@ -142,7 +133,7 @@ app.get('/', (req, res) => {
             <button class="btn-p" style="background:var(--g); height:80px; font-size:18px" onclick="openProductMenu()">MÜSAİT / GİRİLDİ</button>
             <button class="btn-p" style="background:var(--y); color:#000; height:70px" onclick="submitLog('Sonra', '-')">SONRA BAKILACAK</button>
             <button class="btn-p" style="background:var(--r); height:70px" onclick="submitLog('DND', '-')">DND / GİRİLEMEZ</button>
-            <button class="btn-p" style="background:var(--gr); margin-top:20px" onclick="renderBlocks()">⬅ GERİ DÖN</button>
+            <button class="btn-p" style="background:var(--gr); margin-top:20px" onclick="goBackToRooms()">⬅ VAZGEÇ / GERİ</button>
         </div>
         <div id="productMenu" style="display:none">
             <h3 style="text-align:center">Harcama Girişi</h3>
@@ -160,39 +151,14 @@ app.get('/', (req, res) => {
             <button class="a-tab" onclick="switchAdminTab('t_end', this)">🧹 Gün Sonu</button>
             <button onclick="logout()" style="background:#ddd">Çıkış</button>
         </div>
-
-        <div id="t_live" class="tab-content active">
-            <div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Personel</th><th>Durum</th><th>Harcamalar</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div>
-        </div>
-
-        <div id="t_matrix" class="tab-content">
-            <div id="matrixArea"></div>
-        </div>
-
+        <div id="t_live" class="tab-content active"><div style="overflow-x:auto"><table><thead><tr><th>Oda</th><th>Personel</th><th>Durum</th><th>Harcamalar</th><th>Saat</th></tr></thead><tbody id="liveBody"></tbody></table></div></div>
+        <div id="t_matrix" class="tab-content"><div id="matrixArea"></div></div>
         <div id="t_setup" class="tab-content">
-            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px">
-                <h4>Personel Ekle</h4>
-                <input type="text" id="inUN" placeholder="Ad"> <input type="text" id="inUP" placeholder="Şifre">
-                <button class="btn-p" onclick="addStaff()" style="background:var(--b)">PERSONELİ KAYDET</button>
-                <div id="uList" style="margin-top:10px"></div>
-            </div>
-            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px">
-                <h4>Otel Yapısı Ekle</h4>
-                <input type="text" id="inB" placeholder="Blok"> <input type="text" id="inF" placeholder="Kat"> <input type="text" id="inR" placeholder="Odalar (101,102)">
-                <button class="btn-p" onclick="addStruct()">YAPIYI KAYDET</button>
-            </div>
-            <div style="background:#f9f9f9; padding:10px; border-radius:8px;">
-                <h4>Ürün Ekle</h4>
-                <input type="text" id="inP" placeholder="Ürün Adı">
-                <button class="btn-p" onclick="addProd()">ÜRÜN EKLE</button>
-                <div id="pList" style="margin-top:10px"></div>
-            </div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px"><h4>Personel Ekle</h4><input type="text" id="inUN" placeholder="Ad"> <input type="text" id="inUP" placeholder="Şifre"><button class="btn-p" onclick="addStaff()" style="background:var(--b)">PERSONELİ KAYDET</button><div id="uList" style="margin-top:10px"></div></div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px; margin-bottom:15px"><h4>Otel Yapısı Ekle</h4><input type="text" id="inB" placeholder="Blok"> <input type="text" id="inF" placeholder="Kat"> <input type="text" id="inR" placeholder="Odalar (101,102)"><button class="btn-p" onclick="addStruct()">YAPIYI KAYDET</button></div>
+            <div style="background:#f9f9f9; padding:10px; border-radius:8px;"><h4>Ürün Ekle</h4><input type="text" id="inP" placeholder="Ürün Adı"><button class="btn-p" onclick="addProd()">ÜRÜN EKLE</button><div id="pList" style="margin-top:10px"></div></div>
         </div>
-
-        <div id="t_end" class="tab-content" style="text-align:center">
-            <button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g); height:60px">📥 EXCEL RAPORU İNDİR</button>
-            <button class="btn-p" onclick="endDay()" style="background:var(--r); margin-top:20px">🧹 TÜM KAYITLARI SIFIRLA</button>
-        </div>
+        <div id="t_end" class="tab-content" style="text-align:center"><button class="btn-p" onclick="window.open('/api/export')" style="background:var(--g); height:60px">📥 EXCEL RAPORU İNDİR</button><button class="btn-p" onclick="endDay()" style="background:var(--r); margin-top:20px">🧹 TÜM KAYITLARI SIFIRLA</button></div>
     </div>
 
     <script>
@@ -221,40 +187,60 @@ app.get('/', (req, res) => {
         }
 
         async function autoUpdate() { 
-            const res = await fetch('/api/logs'); 
-            logs = await res.json(); 
+            const res = await fetch('/api/logs'); logs = await res.json(); 
             if(document.getElementById('t_live').classList.contains('active')) refreshLiveLogs();
             if(document.getElementById('t_matrix').classList.contains('active')) refreshMatrix();
         }
 
-        // --- PERSONEL ---
         async function initStaff() {
             const [s, p, l] = await Promise.all([fetch('/api/structure').then(r=>r.json()), fetch('/api/products').then(r=>r.json()), fetch('/api/logs').then(r=>r.json())]);
             hotelData = s; products = p; logs = l; renderBlocks();
         }
+
         function renderBlocks() {
+            selBlock = ""; selFloor = ""; // Reset navigasyon
             document.getElementById('staffContent').style.display='block'; document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='none';
             document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='none'; document.getElementById('blockTabs').style.display='grid';
             document.getElementById('blockTabs').innerHTML = hotelData.map(b => '<button class="btn-room" onclick="selectBlock(\\''+b.name+'\\')">Blok '+b.name+'</button>').join('');
         }
+
         function selectBlock(n) {
-            selBlock = n; const b = hotelData.find(x => x.name === n); document.getElementById('blockTabs').style.display='none'; document.getElementById('view_floors').style.display='grid';
-            document.getElementById('view_floors').innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b); color:white" onclick="selectFloor(\\''+f.name+'\\')">Kat '+f.name+'</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">⬅ GERİ</button>';
+            selBlock = n; const b = hotelData.find(x => x.name === n);
+            document.getElementById('blockTabs').style.display='none'; document.getElementById('view_floors').style.display='grid'; document.getElementById('view_rooms').style.display='none';
+            document.getElementById('view_floors').innerHTML = b.floors.map(f => '<button class="btn-room" style="background:var(--b); color:white" onclick="selectFloor(\\''+f.name+'\\')">Kat '+f.name+'</button>').join('') + '<button class="btn-p" onclick="renderBlocks()">⬅ BLOK SEÇİMİNE DÖN</button>';
         }
+
         function selectFloor(n) {
-            selFloor = n; const f = hotelData.find(x => x.name === selBlock).floors.find(x => x.name === n); document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='grid';
-            document.getElementById('view_rooms').innerHTML = f.rooms.map(r => { const log = logs.find(l => String(l.room) === String(r)); return '<button class="btn-room '+(log?'status-'+log.status:'')+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>'; }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+selBlock+'\\')">⬅ GERİ</button>';
+            selFloor = n; const f = hotelData.find(x => x.name === selBlock).floors.find(x => x.name === n);
+            document.getElementById('view_floors').style.display='none'; document.getElementById('view_rooms').style.display='grid'; document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='none'; document.getElementById('staffContent').style.display='block';
+            document.getElementById('view_rooms').innerHTML = f.rooms.map(r => { 
+                const log = logs.find(l => String(l.room) === String(r)); 
+                return '<button class="btn-room '+(log?'status-'+log.status:'')+'" onclick="openStatusMenu(\\''+r+'\\')">'+r+'</button>'; 
+            }).join('') + '<button class="btn-p" onclick="selectBlock(\\''+selBlock+'\\')">⬅ KAT SEÇİMİNE DÖN</button>';
         }
-        function openStatusMenu(r) { selRoom = r; document.getElementById('staffContent').style.display='none'; document.getElementById('statusScreen').style.display='block'; document.getElementById('targetRoomTitle').innerText="Oda "+r; }
+
+        function goBackToRooms() { selectFloor(selFloor); }
+
+        function openStatusMenu(r) { 
+            selRoom = r; document.getElementById('staffContent').style.display='none'; document.getElementById('statusScreen').style.display='block'; document.getElementById('targetRoomTitle').innerText="Oda "+r; 
+        }
+
         function openProductMenu() { 
             document.getElementById('statusScreen').style.display='none'; document.getElementById('productMenu').style.display='block'; counts = {}; products.forEach(p => counts[p.name] = 0);
             document.getElementById('pGrid').innerHTML = products.map((p,i) => '<div style="border:1px solid #ddd; padding:10px; text-align:center; border-radius:8px;" onclick="counts[\\''+p.name+'\\']++; document.getElementById(\\'c'+i+'\\').innerText=counts[\\''+p.name+'\\']">'+p.name+'<br><b id="c'+i+'" style="color:var(--b); font-size:20px;">0</b></div>').join('');
         }
+
         async function submitLog(status, details) {
             await fetch('/api/logs', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({room:selRoom, status, details, staff:currentUser.user}) });
-            initStaff(); setTimeout(() => selectFloor(selFloor), 200); renderBlocks();
+            // Veriyi sessizce güncelle ve aynı katta kal
+            const lRes = await fetch('/api/logs'); logs = await lRes.json();
+            selectFloor(selFloor); 
         }
-        function processAndSubmit() { let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]); submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi"); }
+
+        function processAndSubmit() { 
+            let items = Object.entries(counts).filter(e => e[1] > 0).map(e => e[0] + " x" + e[1]); 
+            submitLog('Müsait', items.length > 0 ? items.join(", ") : "Kontrol Edildi"); 
+        }
 
         // --- ADMIN ---
         async function initAdmin() {
@@ -264,31 +250,20 @@ app.get('/', (req, res) => {
             document.getElementById('uList').innerHTML = u.filter(u => u.role !== 'admin').map(u => '<div class="sub-item">'+u.user+' <button onclick="delUser(\\''+u.user+'\\')" style="background:var(--r); color:white; border-radius:4px; padding:2px 5px">SİL</button></div>').join('');
             refreshLiveLogs();
         }
-        function refreshLiveLogs() {
-            document.getElementById('liveBody').innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join('');
-        }
+        function refreshLiveLogs() { document.getElementById('liveBody').innerHTML = logs.map(l => '<tr class="status-'+l.status+'"><td><b>'+l.room+'</b></td><td>'+l.staff+'</td><td>'+l.status+'</td><td>'+l.details+'</td><td>'+l.endTime+'</td></tr>').join(''); }
         function refreshMatrix() {
-            let h = "";
-            hotelData.forEach(b => {
-                h += '<h4>Blok '+b.name+'</h4>';
-                b.floors.forEach(f => {
+            let h = ""; hotelData.forEach(b => {
+                h += '<h4>Blok '+b.name+'</h4>'; b.floors.forEach(f => {
                     h += '<div style="margin-bottom:10px"><small>Kat '+f.name+'</small><div class="grid">';
-                    f.rooms.forEach(r => {
-                        const log = logs.find(l => String(l.room) === String(r));
-                        const cls = log ? 'status-'+log.status : '';
-                        h += '<div class="btn-room '+cls+'" onclick="showRoomDetail(\\''+r+'\\')">'+r+'</div>';
-                    });
+                    f.rooms.forEach(r => { const log = logs.find(l => String(l.room) === String(r)); const cls = log ? 'status-'+log.status : ''; h += '<div class="btn-room '+cls+'" onclick="showRoomDetail(\\''+r+'\\')">'+r+'</div>'; });
                     h += '</div></div>';
                 });
-            });
-            document.getElementById('matrixArea').innerHTML = h;
+            }); document.getElementById('matrixArea').innerHTML = h;
         }
         function showRoomDetail(r) {
             const log = logs.find(l => String(l.room) === String(r));
             document.getElementById('mTitle').innerText = "Oda " + r;
-            document.getElementById('mBody').innerHTML = log ? 
-                '<p><b>Durum:</b> '+log.status+'</p><p><b>Personel:</b> '+log.staff+'</p><p><b>Harcama:</b> '+log.details+'</p><p><b>Saat:</b> '+log.endTime+'</p>' : 
-                '<p>Henüz işlem yapılmadı.</p>';
+            document.getElementById('mBody').innerHTML = log ? '<p><b>Durum:</b> '+log.status+'</p><p><b>Personel:</b> '+log.staff+'</p><p><b>Harcama:</b> '+log.details+'</p><p><b>Saat:</b> '+log.endTime+'</p>' : '<p>İşlem yapılmadı.</p>';
             document.getElementById('modal').style.display='flex';
         }
         function switchAdminTab(id, btn) {
@@ -313,4 +288,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`v17.1 Harita Modu Aktif: ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`v17.2 Sabit Navigasyon Aktif: ${PORT}`));
